@@ -10,6 +10,9 @@ import gui.panel.KiemTraChatLuongPanel;
 import gui.panel.KhachHangXePanel;
 import gui.panel.PlaceholderPanel;
 import gui.panel.phieusuachua.PhieuSuaChuaPanel;
+import gui.panel.PhuTungTonKhoPanel;
+import gui.panel.NhapKhoPanel;
+import gui.panel.XuatKhoPanel;
 import gui.panel.tiepnhan.TiepNhanXePanel;
 
 import java.util.Arrays;
@@ -71,13 +74,13 @@ public enum Screen {
     // ---- Kho (SV3) ----
     PHU_TUNG_TON_KHO("Phụ tùng & tồn kho", "SV3", EnumSet.of(QUAN_LY, KHO, KY_THUAT_VIEN),
             "Bảng phụ tùng, cột tình trạng xanh/cam/đỏ; bấm 1 món xem lịch sử nhập xuất + người thực hiện; KTV chỉ đọc.",
-            null),
+            PhuTungTonKhoPanel::new),
     NHAP_KHO("Nhập kho", "SV3", EnumSet.of(KHO),
             "Chọn nhà cung cấp; số lượng × đơn giá = thành tiền, tổng lô hàng; cột Tồn trước / Tồn sau; ghi trong 1 transaction.",
-            null),
+            NhapKhoPanel::new),
     XUAT_KHO("Xuất kho", "SV3", EnumSet.of(KHO),
             "Duyệt yêu cầu từ KTV; số lượng xuất > tồn thì báo đỏ và khóa nút xác nhận; gắn với phiếu sửa chữa; transaction.",
-            null),
+            XuatKhoPanel::new),
 
     // ---- Quản lý (SV1) ----
     DICH_VU_NHAN_SU("Dịch vụ & nhân sự", "SV1", EnumSet.of(QUAN_LY),
