@@ -1,6 +1,5 @@
 package bus;
 
-import connectDB.ConnectDB;
 import dao.KhachHangDao;
 import dao.XeDao;
 import dao.XeDao.LichSuSuaChuaRow;
@@ -11,15 +10,14 @@ import util.Validator;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * Nghiệp vụ Quản lý Khách hàng & Phương tiện (Tầng BUS - SV2 phụ trách).
+ * Nghiệp vụ Quản lý Khách hàng & Phương tiện (Tầng BUS).
+ * Toàn bộ dữ liệu được truy vấn và lưu trữ trực tiếp từ cơ sở dữ liệu.
  */
 public final class KhachHangXeBus {
 
@@ -38,53 +36,10 @@ public final class KhachHangXeBus {
         }
     }
 
-    // In-memory mock store dùng khi demo hoặc chưa nối SQL Server
-    private static final List<KhachHang> mockKhachHangs = new ArrayList<>();
-    private static final List<Xe> mockXes = new ArrayList<>();
-    private static final List<LichSuSuaChuaRow> mockLichSus = new ArrayList<>();
-
-    static {
-        seedMockData();
-    }
-
     private KhachHangXeBus() {}
 
-    private static void seedMockData() {
-        DateTimeFormatter dmy = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-        KhachHang kh1 = new KhachHang("KH00012", "Nguyễn Minh Anh", "0901234567", "25 Nguyễn Văn Cừ, TP.HCM", "minhanh.ng@gmail.com", 420);
-        Xe xe1_1 = new Xe("51H-12345", kh1, "Toyota", "Vios", 2021, "Trắng", "2NRX123456", 48250.0f, LocalDate.parse("15/03/2021", dmy).atStartOfDay());
-        Xe xe1_2 = new Xe("51K-68290", kh1, "Mazda", "CX-5", 2023, "Xám", "PE984123", 21600.0f, LocalDate.parse("10/01/2023", dmy).atStartOfDay());
-        Xe xe1_3 = new Xe("51L-90428", kh1, "Honda", "CR-V", 2024, "Đen", "L15BG9988", 12800.0f, LocalDate.parse("05/04/2024", dmy).atStartOfDay());
-
-        KhachHang kh2 = new KhachHang("KH-2610-002", "Trần Quốc Bảo", "0912345678", "124 Cách Mạng Tháng 8, Q.3, TP.HCM", "baotran@gmail.com", 260);
-        Xe xe2_1 = new Xe("51G-67890", kh2, "Honda", "City", 2022, "Đen", "L15Z198273", 35000.0f, LocalDate.parse("10/05/2022", dmy).atStartOfDay());
-
-        KhachHang kh3 = new KhachHang("KH-2610-003", "Lê Hoàng Lan", "0987654321", "88 Lê Văn Sỹ, Phú Nhuận, TP.HCM", "lan.le@yahoo.com", 180);
-        Xe xe3_1 = new Xe("60A-24680", kh3, "Mazda", "3", 2020, "Đỏ", "PE0183746", 52100.0f, LocalDate.parse("20/11/2020", dmy).atStartOfDay());
-
-        KhachHang kh4 = new KhachHang("KH-2610-004", "Vũ Đức Long", "0934567890", "302 Hoàng Văn Thụ, Tân Bình, TP.HCM", "longvd@gmail.com", 610);
-        Xe xe4_1 = new Xe("51F-45678", kh4, "Ford", "Ranger", 2019, "Cam", "P4AT984721", 89400.0f, LocalDate.parse("05/08/2019", dmy).atStartOfDay());
-
-        mockKhachHangs.add(kh1);
-        mockKhachHangs.add(kh2);
-        mockKhachHangs.add(kh3);
-        mockKhachHangs.add(kh4);
-
-        mockXes.add(xe1_1);
-        mockXes.add(xe1_2);
-        mockXes.add(xe1_3);
-        mockXes.add(xe2_1);
-        mockXes.add(xe3_1);
-        mockXes.add(xe4_1);
-
-        mockLichSus.add(new LichSuSuaChuaRow("06/10/2026", "51H-12345", "PSC-20261006-001", "Bảo dưỡng, phanh trước", "Chưa phát hành"));
-        mockLichSus.add(new LichSuSuaChuaRow("15/04/2026", "51H-12345", "PSC-20260415-008", "Bảo dưỡng 40.000 km", "HD20260415-0008"));
-        mockLichSus.add(new LichSuSuaChuaRow("10/10/2025", "51H-12345", "PSC-20251010-005", "Thay lốp, cân chỉnh", "HD20251010-0005"));
-    }
-
     /**
-     * Lấy toàn bộ danh sách khách hàng kèm danh sách xe.
+     * Lấy toàn bộ danh sách khách hàng kèm danh sách xe trực tiếp từ Database.
      */
     public static List<KhachHangOverview> getAll() {
         try {
@@ -92,7 +47,8 @@ public final class KhachHangXeBus {
             List<Xe> xeList = XeDao.getAll();
             return buildOverviewList(khList, xeList);
         } catch (SQLException e) {
-            return buildOverviewList(mockKhachHangs, mockXes);
+            e.printStackTrace();
+            return Collections.emptyList();
         }
     }
 
@@ -138,40 +94,27 @@ public final class KhachHangXeBus {
     }
 
     /**
-     * Lấy danh sách xe của một khách hàng cụ thể.
+     * Lấy danh sách xe của một khách hàng từ CSDL.
      */
     public static List<Xe> getDanhSachXe(String maKH) {
         if (maKH == null) return Collections.emptyList();
         try {
             return XeDao.findByMaKH(maKH);
         } catch (SQLException e) {
-            List<Xe> list = new ArrayList<>();
-            for (Xe x : mockXes) {
-                if (x.getKhachHang() != null && maKH.equals(x.getKhachHang().getMaKH())) {
-                    list.add(x);
-                }
-            }
-            return list;
+            e.printStackTrace();
+            return Collections.emptyList();
         }
     }
 
     /**
      * Thêm mới khách hàng độc lập, tự động phát sinh mã KH theo quy chuẩn KH-YYMM-STT.
-     * Trả về đối tượng KhachHang đã có mã.
      */
     public static KhachHang themKhachHang(KhachHang kh) throws Exception {
         validateKhachHang(kh, true);
-        try {
-            String maKH = IdGenerator.next(IdGenerator.Kind.KHACH_HANG);
-            kh.setMaKH(maKH);
-            KhachHangDao.insert(kh);
-            return kh;
-        } catch (SQLException e) {
-            String maKH = "KH-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyMM")) + "-" + String.format("%03d", mockKhachHangs.size() + 1);
-            kh.setMaKH(maKH);
-            mockKhachHangs.add(0, kh);
-            return kh;
-        }
+        String maKH = IdGenerator.next(IdGenerator.Kind.KHACH_HANG);
+        kh.setMaKH(maKH);
+        KhachHangDao.insert(kh);
+        return kh;
     }
 
     /**
@@ -179,15 +122,21 @@ public final class KhachHangXeBus {
      */
     public static void capNhatKhachHang(KhachHang kh) throws Exception {
         validateKhachHang(kh, false);
-        try {
-            KhachHangDao.update(kh);
-        } catch (SQLException e) {
-            for (int i = 0; i < mockKhachHangs.size(); i++) {
-                if (mockKhachHangs.get(i).getMaKH().equals(kh.getMaKH())) {
-                    mockKhachHangs.set(i, kh);
-                    break;
-                }
-            }
+        KhachHangDao.update(kh);
+    }
+
+    /**
+     * Xóa khách hàng khỏi hệ thống (nếu chưa có giao dịch ràng buộc).
+     */
+    public static void xoaKhachHang(String maKH) throws Exception {
+        if (maKH == null || maKH.trim().isEmpty()) {
+            throw new IllegalArgumentException("Mã khách hàng không hợp lệ.");
+        }
+        if (KhachHangDao.hasTransactions(maKH)) {
+            throw new IllegalArgumentException("Không thể xóa khách hàng này vì đã có phương tiện hoặc chứng từ tiếp nhận / sửa chữa liên kết.");
+        }
+        if (!KhachHangDao.delete(maKH)) {
+            throw new IllegalArgumentException("Không tìm thấy khách hàng hoặc xóa không thành công.");
         }
     }
 
@@ -196,11 +145,7 @@ public final class KhachHangXeBus {
      */
     public static void themXeChoKhachHang(Xe xe) throws Exception {
         validateXe(xe, true, 0);
-        try {
-            XeDao.insert(xe);
-        } catch (SQLException e) {
-            mockXes.add(0, xe);
-        }
+        XeDao.insert(xe);
     }
 
     /**
@@ -208,50 +153,49 @@ public final class KhachHangXeBus {
      */
     public static void capNhatPhuongTien(Xe xe, float odoTruocDo) throws Exception {
         validateXe(xe, false, odoTruocDo);
-        try {
-            XeDao.update(xe);
-        } catch (SQLException e) {
-            for (int i = 0; i < mockXes.size(); i++) {
-                if (mockXes.get(i).getBienSo().equalsIgnoreCase(xe.getBienSo())) {
-                    mockXes.set(i, xe);
-                    break;
-                }
-            }
+        XeDao.update(xe);
+    }
+
+    /**
+     * Xóa phương tiện khỏi hệ thống (nếu chưa có phiếu tiếp nhận/sửa chữa).
+     */
+    public static void xoaXe(String bienSo) throws Exception {
+        if (bienSo == null || bienSo.trim().isEmpty()) {
+            throw new IllegalArgumentException("Biển số xe không hợp lệ.");
+        }
+        String cleanPlate = bienSo.trim().toUpperCase(Locale.ROOT);
+        if (XeDao.hasTickets(cleanPlate)) {
+            throw new IllegalArgumentException("Không thể xóa phương tiện '" + cleanPlate + "' vì đã có lịch sử phiếu tiếp nhận / sửa chữa trong hệ thống.");
+        }
+        if (!XeDao.delete(cleanPlate)) {
+            throw new IllegalArgumentException("Không tìm thấy phương tiện hoặc xóa không thành công.");
         }
     }
 
     /**
-     * Lấy lịch sử sửa chữa theo biển số xe hoặc tất cả các xe của khách hàng.
+     * Lấy lịch sử sửa chữa theo biển số xe hoặc tất cả các xe của khách hàng từ Database.
      */
     public static List<LichSuSuaChuaRow> getLichSuSuaChua(String bienSo, List<Xe> allVehicles) {
         if (bienSo != null && !bienSo.trim().isEmpty() && !bienSo.startsWith("ALL")) {
             try {
-                List<LichSuSuaChuaRow> list = XeDao.getLichSuSuaChua(bienSo);
-                if (!list.isEmpty()) return list;
-            } catch (SQLException ignored) {}
-
-            List<LichSuSuaChuaRow> filtered = new ArrayList<>();
-            for (LichSuSuaChuaRow r : mockLichSus) {
-                if (r.bienSo().equalsIgnoreCase(bienSo)) {
-                    filtered.add(r);
-                }
+                return XeDao.getLichSuSuaChua(bienSo);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return Collections.emptyList();
             }
-            return filtered;
         }
 
-        // Lấy tất cả các xe
         List<LichSuSuaChuaRow> allHistory = new ArrayList<>();
         if (allVehicles != null) {
             for (Xe x : allVehicles) {
                 try {
                     allHistory.addAll(XeDao.getLichSuSuaChua(x.getBienSo()));
-                } catch (SQLException ignored) {}
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
         }
-        if (!allHistory.isEmpty()) {
-            return allHistory;
-        }
-        return mockLichSus;
+        return allHistory;
     }
 
     /**
@@ -276,18 +220,10 @@ public final class KhachHangXeBus {
             throw new IllegalArgumentException("Điểm tích lũy không được nhỏ hơn 0.");
         }
 
-        // Kiểm tra trùng SĐT
-        try {
-            String excludeId = isCreate ? null : kh.getMaKH();
-            if (KhachHangDao.existsPhone(kh.getSoDienThoai(), excludeId)) {
-                throw new IllegalArgumentException("Số điện thoại '" + kh.getSoDienThoai() + "' đã tồn tại trong hệ thống.");
-            }
-        } catch (SQLException ignored) {
-            for (KhachHang m : mockKhachHangs) {
-                if ((isCreate || !m.getMaKH().equals(kh.getMaKH())) && m.getSoDienThoai().equals(kh.getSoDienThoai())) {
-                    throw new IllegalArgumentException("Số điện thoại '" + kh.getSoDienThoai() + "' đã tồn tại trong hồ sơ khác.");
-                }
-            }
+        // Kiểm tra trùng SĐT trong CSDL
+        String excludeId = isCreate ? null : kh.getMaKH();
+        if (KhachHangDao.existsPhone(kh.getSoDienThoai(), excludeId)) {
+            throw new IllegalArgumentException("Số điện thoại '" + kh.getSoDienThoai() + "' đã tồn tại trong hệ thống.");
         }
     }
 
@@ -335,27 +271,22 @@ public final class KhachHangXeBus {
         }
 
         if (isCreate) {
-            try {
-                if (XeDao.existsPlate(plate)) {
-                    throw new IllegalArgumentException("Biển số xe '" + plate + "' đã tồn tại trong hệ thống.");
-                }
-            } catch (SQLException ignored) {
-                for (Xe mx : mockXes) {
-                    if (mx.getBienSo().equalsIgnoreCase(plate)) {
-                        throw new IllegalArgumentException("Biển số xe '" + plate + "' đã có trong hệ thống.");
-                    }
-                }
+            if (XeDao.existsPlate(plate)) {
+                throw new IllegalArgumentException("Biển số xe '" + plate + "' đã tồn tại trong hệ thống.");
             }
         }
     }
 
     private static List<KhachHangOverview> buildOverviewList(List<KhachHang> khList, List<Xe> xeList) {
         List<KhachHangOverview> result = new ArrayList<>();
+        if (khList == null) return result;
         for (KhachHang kh : khList) {
             List<Xe> vehicles = new ArrayList<>();
-            for (Xe x : xeList) {
-                if (x.getKhachHang() != null && kh.getMaKH().equals(x.getKhachHang().getMaKH())) {
-                    vehicles.add(x);
+            if (xeList != null) {
+                for (Xe x : xeList) {
+                    if (x.getKhachHang() != null && kh.getMaKH().equals(x.getKhachHang().getMaKH())) {
+                        vehicles.add(x);
+                    }
                 }
             }
             result.add(new KhachHangOverview(kh, vehicles));

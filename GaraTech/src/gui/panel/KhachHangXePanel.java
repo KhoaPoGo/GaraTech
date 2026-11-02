@@ -28,15 +28,19 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.JScrollBar;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -45,6 +49,9 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelListener;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -61,6 +68,7 @@ public final class KhachHangXePanel extends BasePanel {
     private static final String CARD_ADD_CUSTOMER = "ADD_CUSTOMER";
     private static final String CARD_ADD_VEHICLE = "ADD_VEHICLE";
     private static final String CARD_EDIT_VEHICLE = "EDIT_VEHICLE";
+    private static final String CARD_VEHICLE_HISTORY = "VEHICLE_HISTORY";
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel cardsPanel = new JPanel(cardLayout);
@@ -113,7 +121,7 @@ public final class KhachHangXePanel extends BasePanel {
     // 3. ADD VEHICLE VIEW COMPONENTS
     // =========================================================================
     private final JLabel lblAddVehCustName = UI.h1("Tên khách hàng");
-    private final JLabel lblAddVehCustSub = UI.muted("KH00000 · SĐT: 0000000000 · Thông tin khách hàng chỉ đọc");
+    private final JLabel lblAddVehCustSub = UI.muted("KH00000 · SĐT: 0000000000");
     private final JLabel lblAddVehPlatesCompare = UI.muted("Biển số đã có để đối chiếu: ---");
     private final JLabel lblAddVehPointsStat = UI.h1("0");
     private final JLabel lblAddVehCountStat = UI.h1("0 xe");
@@ -122,10 +130,8 @@ public final class KhachHangXePanel extends BasePanel {
     private final JTextField txtAddVehMakeModel = new JTextField();
     private final JTextField txtAddVehYear = new JTextField(String.valueOf(LocalDate.now().getYear()));
     private final JTextField txtAddVehColor = new JTextField();
-    private final JTextField txtAddVehEngine = new JTextField();
     private final JTextField txtAddVehOdo = new JTextField("0");
     private final JTextField txtAddVehRegDate = new JTextField(LocalDate.now().format(DMY));
-    private final JLabel lblAddVehReturnNote = UI.muted("");
 
     // =========================================================================
     // 4. EDIT VEHICLE VIEW COMPONENTS
@@ -140,6 +146,26 @@ public final class KhachHangXePanel extends BasePanel {
     private final JLabel lblEditVehOdoHint = UI.muted("Không nhỏ hơn số km lần trước");
     private final JTextField txtEditVehRegDate = new JTextField();
     private float editVehPreviousOdo = 0;
+
+    // =========================================================================
+    // 5. VEHICLE HISTORY VIEW COMPONENTS
+    // =========================================================================
+    private final JLabel lblHistoryOdoVal = new JLabel("0 km");
+    private final JLabel lblHistoryRepairCount = new JLabel("0");
+    private final JLabel lblHistoryLastDate = new JLabel("---");
+
+    private final JPanel historyVehicleCardsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
+    private final DefaultTableModel vehHistoryModel = UI.readOnlyModel("Ngày", "Phiếu sửa chữa", "Hạng mục chính", "Trạng thái");
+    private final JTable vehHistoryTable = UI.table(vehHistoryModel);
+
+    private final JTextField txtHistoryDetailKtv = new JTextField();
+    private final JTextField txtHistoryDetailDeadline = new JTextField();
+    private final JTextField txtHistoryDetailNotes = new JTextField();
+    private final JTextField txtHistoryDetailDocs = new JTextField();
+
+    private Xe vehicleInHistory = null;
+    private KhachHang customerInHistory = null;
+    private List<LichSuSuaChuaRow> currentVehicleHistoryRows = new ArrayList<>();
 
     // State
     private List<KhachHangOverview> currentList = new ArrayList<>();
@@ -164,6 +190,7 @@ public final class KhachHangXePanel extends BasePanel {
         cardsPanel.add(buildAddCustomerView(), CARD_ADD_CUSTOMER);
         cardsPanel.add(buildAddVehicleView(), CARD_ADD_VEHICLE);
         cardsPanel.add(buildEditVehicleView(), CARD_EDIT_VEHICLE);
+        cardsPanel.add(buildVehicleHistoryView(), CARD_VEHICLE_HISTORY);
 
         body.add(cardsPanel, BorderLayout.CENTER);
 
@@ -333,9 +360,18 @@ public final class KhachHangXePanel extends BasePanel {
         customerTable.getColumnModel().getColumn(2).setPreferredWidth(140);
         customerTable.getColumnModel().getColumn(3).setPreferredWidth(80);
 
-        DefaultTableCellRenderer rightR = new DefaultTableCellRenderer();
-        rightR.setHorizontalAlignment(SwingConstants.RIGHT);
-        customerTable.getColumnModel().getColumn(3).setCellRenderer(rightR);
+        DefaultTableCellRenderer cellR = new DefaultTableCellRenderer();
+        cellR.setHorizontalAlignment(SwingConstants.LEFT);
+        cellR.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
+        for (int i = 0; i < 4; i++) {
+            customerTable.getColumnModel().getColumn(i).setCellRenderer(cellR);
+        }
+
+        TableCellRenderer headRenderer = customerTable.getTableHeader().getDefaultRenderer();
+        if (headRenderer instanceof DefaultTableCellRenderer headR) {
+            headR.setHorizontalAlignment(SwingConstants.LEFT);
+            headR.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
+        }
 
         JScrollPane sp = new JScrollPane(customerTable);
         sp.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 0, Theme.BORDER));
@@ -387,6 +423,10 @@ public final class KhachHangXePanel extends BasePanel {
             }
         });
 
+        JButton btnDeleteCustomer = UI.dangerButton("Xóa khách hàng");
+        btnDeleteCustomer.addActionListener(e -> handleDeleteCustomer());
+
+        headActions.add(btnDeleteCustomer);
         headActions.add(btnEditProfile);
         headActions.add(btnAddVehicleTop);
         head.add(headActions, BorderLayout.EAST);
@@ -425,14 +465,6 @@ public final class KhachHangXePanel extends BasePanel {
         JPanel vHead = new JPanel(new BorderLayout());
         vHead.setOpaque(false);
         vHead.add(lblVehicleCountHeader, BorderLayout.WEST);
-
-        JButton btnAddVehInner = UI.primaryButton("+ Thêm xe");
-        btnAddVehInner.addActionListener(e -> {
-            if (selectedOverview != null) {
-                switchToAddVehicleView(selectedOverview.khachHang());
-            }
-        });
-        vHead.add(btnAddVehInner, BorderLayout.EAST);
         vehiclesCard.add(vHead, BorderLayout.NORTH);
 
         vehiclesListContainer.setOpaque(false);
@@ -511,7 +543,7 @@ public final class KhachHangXePanel extends BasePanel {
         btnCol.setLayout(new BoxLayout(btnCol, BoxLayout.Y_AXIS));
 
         JButton btnView = UI.secondaryButton("Xem hồ sơ");
-        btnView.addActionListener(e -> switchToEditVehicleView(xe));
+        btnView.addActionListener(e -> switchToVehicleHistoryView(xe));
 
         JButton btnCheckIn = UI.primaryButton("Tiếp nhận xe");
         btnCheckIn.addActionListener(e -> {
@@ -519,11 +551,17 @@ public final class KhachHangXePanel extends BasePanel {
             Navigator.go(Screen.TIEP_NHAN_XE);
         });
 
+        JButton btnDeleteVeh = UI.dangerButton("Xóa xe");
+        btnDeleteVeh.addActionListener(e -> handleDeleteVehicle(xe));
+
         btnView.setAlignmentX(RIGHT_ALIGNMENT);
         btnCheckIn.setAlignmentX(RIGHT_ALIGNMENT);
+        btnDeleteVeh.setAlignmentX(RIGHT_ALIGNMENT);
         btnCol.add(btnView);
         btnCol.add(Box.createVerticalStrut(6));
         btnCol.add(btnCheckIn);
+        btnCol.add(Box.createVerticalStrut(6));
+        btnCol.add(btnDeleteVeh);
 
         card.add(btnCol, BorderLayout.EAST);
         return card;
@@ -632,7 +670,7 @@ public final class KhachHangXePanel extends BasePanel {
 
         card.add(UI.h2("Thông tin liên hệ"), BorderLayout.NORTH);
 
-        JPanel formGrid = new JPanel(new GridLayout(3, 2, 20, 16));
+        JPanel formGrid = new JPanel(new GridLayout(3, 2, 24, 12));
         formGrid.setOpaque(false);
 
         // Row 1
@@ -647,25 +685,6 @@ public final class KhachHangXePanel extends BasePanel {
         formGrid.add(formFieldInput("Địa chỉ", txtAddCustAddress, null));
         formGrid.add(formFieldInput("Điểm tích lũy", txtAddCustPoints, "Hệ thống quản lý · khách mới mặc định 0"));
 
-        JPanel center = new JPanel();
-        center.setOpaque(false);
-        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
-        center.add(formGrid);
-        center.add(Box.createVerticalStrut(18));
-
-        // Blue notice
-        RoundedPanel notice = new RoundedPanel(10, Theme.INFO_BG).borderColor(new Color(0xB8D5F8));
-        notice.setLayout(new BorderLayout());
-        notice.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
-        JLabel lblNotice = new JLabel("Khi thêm mới, mã được tự sinh theo quy tắc KH-YYMM-STT trong báo cáo. Không xóa hồ sơ đã có chứng từ.");
-        lblNotice.setFont(Theme.font(Font.PLAIN, 12));
-        lblNotice.setForeground(Theme.INFO);
-        notice.add(lblNotice, BorderLayout.CENTER);
-        notice.setAlignmentX(LEFT_ALIGNMENT);
-        center.add(notice);
-
-        card.add(center, BorderLayout.CENTER);
-
         // Bottom Actions: Lưu và thêm xe | Hủy
         JPanel bot = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
         bot.setOpaque(false);
@@ -678,8 +697,16 @@ public final class KhachHangXePanel extends BasePanel {
 
         bot.add(btnSaveAndAddVeh);
         bot.add(btnCancel);
-        card.add(bot, BorderLayout.SOUTH);
+        bot.setAlignmentX(LEFT_ALIGNMENT);
 
+        JPanel content = new JPanel();
+        content.setOpaque(false);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.add(formGrid);
+        content.add(Box.createVerticalStrut(22));
+        content.add(bot);
+
+        card.add(content, BorderLayout.NORTH);
         return card;
     }
 
@@ -762,7 +789,7 @@ public final class KhachHangXePanel extends BasePanel {
         formHead.add(UI.muted("* Thông tin bắt buộc"), BorderLayout.EAST);
         card.add(formHead, BorderLayout.NORTH);
 
-        JPanel grid = new JPanel(new GridLayout(4, 2, 20, 16));
+        JPanel grid = new JPanel(new GridLayout(3, 2, 20, 16));
         grid.setOpaque(false);
 
         grid.add(formFieldInput("Biển số *", txtAddVehPlate, "Chữ in hoa; 6~12 ký tự; không trùng bất kỳ xe đã có."));
@@ -771,22 +798,8 @@ public final class KhachHangXePanel extends BasePanel {
         grid.add(formFieldInput("Năm sản xuất *", txtAddVehYear, "Từ 1980 đến năm hiện tại"));
         grid.add(formFieldInput("Màu sơn *", txtAddVehColor, "Nhập màu sơn"));
 
-        grid.add(formFieldInput("Số máy", txtAddVehEngine, "Không bắt buộc · 5~20 chữ in hoa và chữ số"));
         grid.add(formFieldInput("ODO hiện tại *", txtAddVehOdo, "Số km không âm"));
-
         grid.add(formFieldInput("Ngày đăng ký *", txtAddVehRegDate, "Không sau ngày hiện tại"));
-
-        // Right blue box
-        RoundedPanel pBox = new RoundedPanel(10, Theme.INFO_BG).borderColor(new Color(0xB8D5F8));
-        pBox.setLayout(new BorderLayout());
-        pBox.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
-        JLabel lblNotice = new JLabel("<html><b>Biển số phải là duy nhất</b><br>"
-                + "<span style='font-size:11px'>Không thể lưu nếu biển số trùng với xe đã có trong hệ thống, kể cả xe của khách hàng này.</span></html>");
-        lblNotice.setForeground(Theme.INFO);
-        pBox.add(lblNotice, BorderLayout.CENTER);
-        grid.add(pBox);
-
-        card.add(grid, BorderLayout.CENTER);
 
         // Bottom Actions: Lưu xe | Hủy
         JPanel bot = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
@@ -800,9 +813,16 @@ public final class KhachHangXePanel extends BasePanel {
 
         bot.add(btnSaveVeh);
         bot.add(btnCancelVeh);
-        bot.add(lblAddVehReturnNote);
+        bot.setAlignmentX(LEFT_ALIGNMENT);
 
-        card.add(bot, BorderLayout.SOUTH);
+        JPanel vContent = new JPanel();
+        vContent.setOpaque(false);
+        vContent.setLayout(new BoxLayout(vContent, BoxLayout.Y_AXIS));
+        vContent.add(grid);
+        vContent.add(Box.createVerticalStrut(20));
+        vContent.add(bot);
+
+        card.add(vContent, BorderLayout.NORTH);
         card.setAlignmentX(LEFT_ALIGNMENT);
         view.add(card);
 
@@ -832,7 +852,7 @@ public final class KhachHangXePanel extends BasePanel {
             int year = Integer.parseInt(txtAddVehYear.getText().trim());
             String color = txtAddVehColor.getText().trim();
             float odo = Float.parseFloat(txtAddVehOdo.getText().trim().replaceAll("[^0-9.]", ""));
-            String engine = txtAddVehEngine.getText().trim();
+            String engine = "";
             LocalDateTime regDate = LocalDate.parse(txtAddVehRegDate.getText().trim(), DMY).atStartOfDay();
 
             Xe newXe = new Xe(plate, customerForAddingVehicle, hangXe, model, year, color, engine, odo, regDate);
@@ -882,23 +902,200 @@ public final class KhachHangXePanel extends BasePanel {
         grid.add(formFieldInput("ODO hiện tại *", txtEditVehOdo, "Không nhỏ hơn số km lần trước"));
         grid.add(formFieldInput("Ngày đăng ký *", txtEditVehRegDate, "Không sau ngày hiện tại"));
 
-        card.add(grid, BorderLayout.CENTER);
-
         // Bottom Actions: Lưu phương tiện | Hủy
         JPanel bot = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
         bot.setOpaque(false);
 
         JButton btnSaveEditVeh = UI.primaryButton("Lưu phương tiện");
         JButton btnCancelEditVeh = UI.secondaryButton("Hủy");
+        JButton btnDeleteEditVeh = UI.dangerButton("Xóa phương tiện");
 
         btnSaveEditVeh.addActionListener(e -> handleUpdateVehicle());
         btnCancelEditVeh.addActionListener(e -> switchToMainView());
+        btnDeleteEditVeh.addActionListener(e -> handleDeleteVehicle(vehicleToEdit));
 
         bot.add(btnSaveEditVeh);
         bot.add(btnCancelEditVeh);
+        bot.add(btnDeleteEditVeh);
+        bot.setAlignmentX(LEFT_ALIGNMENT);
 
-        card.add(bot, BorderLayout.SOUTH);
+        JPanel content = new JPanel();
+        content.setOpaque(false);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.add(grid);
+        content.add(Box.createVerticalStrut(20));
+        content.add(bot);
+
+        card.add(content, BorderLayout.NORTH);
         return card;
+    }
+
+    // =========================================================================
+    // 5. BUILD VEHICLE HISTORY VIEW (Hồ sơ xe và lịch sử sửa chữa)
+    // =========================================================================
+    private JComponent buildVehicleHistoryView() {
+        JPanel root = new JPanel();
+        root.setOpaque(false);
+        root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
+
+        // 1. Top 3 Stat Cards in a row
+        JPanel statsRow = new JPanel(new GridLayout(1, 3, 16, 0));
+        statsRow.setOpaque(false);
+        statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 95));
+
+        statsRow.add(buildStatBox("ODO gần nhất", lblHistoryOdoVal));
+        statsRow.add(buildStatBox("Lượt sửa chữa", lblHistoryRepairCount));
+        statsRow.add(buildStatBox("Lần gần nhất", lblHistoryLastDate));
+
+        statsRow.setAlignmentX(LEFT_ALIGNMENT);
+        root.add(statsRow);
+        root.add(Box.createVerticalStrut(16));
+
+        // 2. Card: Lịch sử theo phương tiện
+        RoundedPanel pHistory = new RoundedPanel(16, Theme.CARD);
+        pHistory.setLayout(new BorderLayout(0, 14));
+        pHistory.setBorder(BorderFactory.createEmptyBorder(20, 22, 20, 22));
+
+        JPanel pHistHead = new JPanel();
+        pHistHead.setOpaque(false);
+        pHistHead.setLayout(new BoxLayout(pHistHead, BoxLayout.Y_AXIS));
+        pHistHead.add(UI.h2("Lịch sử theo phương tiện"));
+        pHistHead.add(Box.createVerticalStrut(6));
+        pHistHead.add(UI.muted("Chuyển xe"));
+        pHistHead.add(Box.createVerticalStrut(10));
+
+        historyVehicleCardsPanel.setOpaque(false);
+        historyVehicleCardsPanel.setAlignmentX(LEFT_ALIGNMENT);
+        pHistHead.add(historyVehicleCardsPanel);
+        pHistory.add(pHistHead, BorderLayout.NORTH);
+
+        // Table
+        vehHistoryTable.setRowHeight(42);
+        vehHistoryTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        vehHistoryTable.getColumnModel().getColumn(0).setPreferredWidth(110);
+        vehHistoryTable.getColumnModel().getColumn(1).setPreferredWidth(170);
+        vehHistoryTable.getColumnModel().getColumn(2).setPreferredWidth(280);
+        vehHistoryTable.getColumnModel().getColumn(3).setPreferredWidth(150);
+
+        DefaultTableCellRenderer vCellR = new DefaultTableCellRenderer();
+        vCellR.setHorizontalAlignment(SwingConstants.LEFT);
+        vCellR.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
+        for (int i = 0; i < 4; i++) {
+            vehHistoryTable.getColumnModel().getColumn(i).setCellRenderer(vCellR);
+        }
+        TableCellRenderer vHeadRenderer = vehHistoryTable.getTableHeader().getDefaultRenderer();
+        if (vHeadRenderer instanceof DefaultTableCellRenderer vHeadR) {
+            vHeadR.setHorizontalAlignment(SwingConstants.LEFT);
+            vHeadR.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
+        }
+
+        JPanel tableBlock = UI.tableBlock(vehHistoryTable);
+        pHistory.add(tableBlock, BorderLayout.CENTER);
+
+        pHistory.setAlignmentX(LEFT_ALIGNMENT);
+        root.add(pHistory);
+        root.add(Box.createVerticalStrut(16));
+
+        // 3. Card: Thông tin lần sửa chữa đang chọn
+        RoundedPanel pDetail = new RoundedPanel(16, Theme.CARD);
+        pDetail.setLayout(new BorderLayout(0, 12));
+        pDetail.setBorder(BorderFactory.createEmptyBorder(20, 22, 20, 22));
+
+        pDetail.add(UI.h2("Thông tin lần sửa chữa đang chọn"), BorderLayout.NORTH);
+
+        JPanel formGrid = new JPanel(new GridLayout(2, 2, 24, 8));
+        formGrid.setOpaque(false);
+
+        formGrid.add(formFieldDetail("Kỹ thuật viên", txtHistoryDetailKtv));
+        formGrid.add(formFieldDetail("Hạn hoàn thành", txtHistoryDetailDeadline));
+        formGrid.add(formFieldDetail("Ghi chú kỹ thuật", txtHistoryDetailNotes));
+        formGrid.add(formFieldDetail("Chứng từ liên quan", txtHistoryDetailDocs));
+
+        JPanel pDetailContent = new JPanel(new BorderLayout());
+        pDetailContent.setOpaque(false);
+        pDetailContent.add(formGrid, BorderLayout.NORTH);
+
+        pDetail.add(pDetailContent, BorderLayout.CENTER);
+        pDetail.setAlignmentX(LEFT_ALIGNMENT);
+        root.add(pDetail);
+        root.add(Box.createVerticalStrut(18));
+
+        // 4. Bottom Action buttons
+        JPanel actionsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
+        actionsRow.setOpaque(false);
+
+        JButton btnViewPsc = UI.primaryButton("Xem phiếu sửa chữa");
+        btnViewPsc.addActionListener(e -> {
+            Navigator.go(Screen.PHIEU_SUA_CHUA);
+        });
+
+        JButton btnBackCust = UI.secondaryButton("Quay về hồ sơ khách");
+        btnBackCust.addActionListener(e -> {
+            switchToMainView();
+            if (customerInHistory != null) {
+                for (int i = 0; i < currentList.size(); i++) {
+                    if (currentList.get(i).maKH().equals(customerInHistory.getMaKH())) {
+                        customerTable.setRowSelectionInterval(i, i);
+                        selectCustomer(currentList.get(i));
+                        break;
+                    }
+                }
+            }
+        });
+
+        actionsRow.add(btnViewPsc);
+        actionsRow.add(btnBackCust);
+        actionsRow.setAlignmentX(LEFT_ALIGNMENT);
+
+        root.add(actionsRow);
+
+        vehHistoryTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int row = vehHistoryTable.getSelectedRow();
+                if (row >= 0 && row < currentVehicleHistoryRows.size()) {
+                    populateHistoryDetail(currentVehicleHistoryRows.get(row));
+                }
+            }
+        });
+
+        attachMouseWheelRecursively(root);
+
+        return root;
+    }
+
+    private JPanel buildStatBox(String label, JLabel valLabel) {
+        RoundedPanel box = new RoundedPanel(14, Theme.CARD);
+        box.setLayout(new BorderLayout(0, 6));
+        box.setBorder(BorderFactory.createEmptyBorder(18, 22, 18, 22));
+
+        JLabel lbl = UI.muted(label);
+        lbl.setFont(Theme.font(Font.PLAIN, 12));
+        box.add(lbl, BorderLayout.NORTH);
+
+        valLabel.setFont(Theme.font(Font.BOLD, 24));
+        valLabel.setForeground(Theme.TEXT);
+        box.add(valLabel, BorderLayout.CENTER);
+
+        return box;
+    }
+
+    private void attachMouseWheelRecursively(Component comp) {
+        if (comp == null) return;
+        comp.addMouseWheelListener(e -> {
+            JScrollPane parentScroll = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, comp);
+            if (parentScroll != null) {
+                JScrollBar bar = parentScroll.getVerticalScrollBar();
+                if (bar != null) {
+                    int amount = e.getWheelRotation() * bar.getUnitIncrement() * 2;
+                    bar.setValue(bar.getValue() + amount);
+                }
+            }
+        });
+        if (comp instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                attachMouseWheelRecursively(child);
+            }
+        }
     }
 
     private void handleUpdateVehicle() {
@@ -966,7 +1163,7 @@ public final class KhachHangXePanel extends BasePanel {
 
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Chỉnh sửa hồ sơ khách hàng", JDialog.ModalityType.APPLICATION_MODAL);
         dialog.setSize(520, 480);
-        dialog.setLocationRelativeTo(this);
+        dialog.setLocationRelativeTo(null);
 
         JPanel p = new JPanel(new BorderLayout(0, 16));
         p.setBackground(Color.WHITE);
@@ -1031,6 +1228,47 @@ public final class KhachHangXePanel extends BasePanel {
         dialog.setVisible(true);
     }
 
+    private void handleDeleteCustomer() {
+        if (selectedOverview == null) {
+            Msg.error(this, "Vui lòng chọn khách hàng cần xóa.");
+            return;
+        }
+        KhachHang kh = selectedOverview.khachHang();
+        if (!Msg.confirm(this, "Bạn có chắc chắn muốn xóa khách hàng " + kh.getHoTen() + " (" + kh.getMaKH() + ") không?")) {
+            return;
+        }
+        try {
+            KhachHangXeBus.xoaKhachHang(kh.getMaKH());
+            Msg.info(this, "Đã xóa khách hàng " + kh.getHoTen() + " thành công.");
+            selectedOverview = null;
+            loadData();
+        } catch (IllegalArgumentException ex) {
+            Msg.error(this, ex.getMessage());
+        } catch (Exception ex) {
+            Msg.error(this, "Lỗi khi xóa khách hàng: " + ex.getMessage());
+        }
+    }
+
+    private void handleDeleteVehicle(Xe xe) {
+        if (xe == null) {
+            Msg.error(this, "Vui lòng chọn phương tiện cần xóa.");
+            return;
+        }
+        if (!Msg.confirm(this, "Bạn có chắc chắn muốn xóa phương tiện có biển số " + xe.getBienSo() + " không?")) {
+            return;
+        }
+        try {
+            KhachHangXeBus.xoaXe(xe.getBienSo());
+            Msg.info(this, "Đã xóa phương tiện " + xe.getBienSo() + " thành công.");
+            switchToMainView();
+            loadData();
+        } catch (IllegalArgumentException ex) {
+            Msg.error(this, ex.getMessage());
+        } catch (Exception ex) {
+            Msg.error(this, "Lỗi khi xóa phương tiện: " + ex.getMessage());
+        }
+    }
+
     // =========================================================================
     // NAVIGATION METHODS
     // =========================================================================
@@ -1048,7 +1286,7 @@ public final class KhachHangXePanel extends BasePanel {
         setHeader("GARATECH / KHÁCH HÀNG & XE", "Thêm khách hàng",
                 "Nhập thông tin bắt buộc và kiểm tra trước khi lưu hồ sơ mới.");
         actions.removeAll();
-        JButton btnBack = UI.secondaryButton("Mục lục →");
+        JButton btnBack = UI.secondaryButton("← Quay lại");
         btnBack.addActionListener(e -> switchToMainView());
         actions.add(btnBack);
         actions.revalidate();
@@ -1078,7 +1316,7 @@ public final class KhachHangXePanel extends BasePanel {
 
         // Populate banner
         lblAddVehCustName.setText(kh.getHoTen());
-        lblAddVehCustSub.setText(kh.getMaKH() + " · SĐT: " + kh.getSoDienThoai() + " · Thông tin khách hàng chỉ đọc");
+        lblAddVehCustSub.setText(kh.getMaKH() + " · SĐT: " + kh.getSoDienThoai());
 
         List<Xe> existingVehicles = KhachHangXeBus.getDanhSachXe(kh.getMaKH());
         StringBuilder sbPlates = new StringBuilder("Biển số đã có để đối chiếu: ");
@@ -1094,14 +1332,12 @@ public final class KhachHangXePanel extends BasePanel {
 
         lblAddVehPointsStat.setText(String.valueOf(kh.getDiemTichLuy()));
         lblAddVehCountStat.setText(existingVehicles.size() + " xe");
-        lblAddVehReturnNote.setText("Lưu xe hoặc Hủy để trở về danh sách xe của " + kh.getHoTen() + ".");
 
         // Clear inputs
         txtAddVehPlate.setText("");
         txtAddVehMakeModel.setText("");
         txtAddVehYear.setText(String.valueOf(LocalDate.now().getYear()));
         txtAddVehColor.setText("");
-        txtAddVehEngine.setText("");
         txtAddVehOdo.setText("0");
         txtAddVehRegDate.setText(LocalDate.now().format(DMY));
 
@@ -1138,6 +1374,182 @@ public final class KhachHangXePanel extends BasePanel {
         txtEditVehMakeModel.requestFocus();
     }
 
+    private void switchToVehicleHistoryView(Xe xe) {
+        if (xe == null) return;
+        this.vehicleInHistory = xe;
+        this.customerInHistory = xe.getKhachHang();
+
+        String custName = customerInHistory != null ? customerInHistory.getHoTen() : "";
+        String custCode = customerInHistory != null ? customerInHistory.getMaKH() : "";
+        String phone = customerInHistory != null ? customerInHistory.getSoDienThoai() : "";
+        int points = customerInHistory != null ? customerInHistory.getDiemTichLuy() : 0;
+        int countVeh = (selectedOverview != null && selectedOverview.danhSachXe() != null)
+                ? selectedOverview.danhSachXe().size() : 1;
+
+        String odoStr = String.format("%,.0f km", xe.getSoKmHienTai());
+        String currentVehInfo = xe.getBienSo() + " " + xe.getHangXe() + " " + xe.getModel() + " " + xe.getNamSanXuat()
+                + " " + xe.getMauXe() + " " + odoStr;
+
+        String subtitle = String.format("Khách %s %s · SĐT %s · %d điểm · %d xe · Đang xem %s",
+                custName, custCode, phone, points, countVeh, currentVehInfo);
+
+        setHeader("GARATECH / KHÁCH HÀNG & XE", "Hồ sơ xe và lịch sử sửa chữa", subtitle);
+
+        actions.removeAll();
+        JButton btnBack = UI.secondaryButton("Mục lục →");
+        btnBack.addActionListener(e -> switchToMainView());
+        actions.add(btnBack);
+        actions.revalidate();
+        actions.repaint();
+
+        renderHistoryVehicleCards();
+        loadVehicleHistory(xe);
+
+        cardLayout.show(cardsPanel, CARD_VEHICLE_HISTORY);
+        revalidate();
+        repaint();
+
+        SwingUtilities.invokeLater(() -> {
+            JScrollPane parentScroll = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, this);
+            if (parentScroll != null) {
+                parentScroll.getVerticalScrollBar().setValue(0);
+            }
+        });
+    }
+
+    private void renderHistoryVehicleCards() {
+        historyVehicleCardsPanel.removeAll();
+        List<Xe> vehicles = (selectedOverview != null && selectedOverview.danhSachXe() != null)
+                ? selectedOverview.danhSachXe()
+                : (customerInHistory != null
+                    ? KhachHangXeBus.getDanhSachXe(customerInHistory.getMaKH())
+                    : Collections.singletonList(vehicleInHistory));
+
+        for (Xe x : vehicles) {
+            boolean isSelected = vehicleInHistory != null && x.getBienSo().equalsIgnoreCase(vehicleInHistory.getBienSo());
+            JPanel card = createVehicleSelectorCard(x, isSelected);
+            attachMouseWheelRecursively(card);
+            historyVehicleCardsPanel.add(card);
+        }
+        historyVehicleCardsPanel.revalidate();
+        historyVehicleCardsPanel.repaint();
+    }
+
+    private JPanel createVehicleSelectorCard(Xe x, boolean isSelected) {
+        Color bg = isSelected ? new Color(0xFE, 0xF7, 0xD6) : Color.WHITE;
+        Color border = isSelected ? new Color(0xFB, 0xC5, 0x2D) : Theme.BORDER;
+        RoundedPanel card = new RoundedPanel(12, bg).borderColor(border);
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+        card.setPreferredSize(new Dimension(240, 95));
+        card.setMinimumSize(new Dimension(220, 95));
+        card.setMaximumSize(new Dimension(260, 95));
+        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Row 1: Plate + (if selected) badge "Đang xem"
+        JPanel r1 = new JPanel(new BorderLayout());
+        r1.setOpaque(false);
+        JLabel lPlate = new JLabel(x.getBienSo());
+        lPlate.setFont(Theme.font(Font.BOLD, 14));
+        lPlate.setForeground(Theme.TEXT);
+        r1.add(lPlate, BorderLayout.WEST);
+
+        if (isSelected) {
+            JLabel badge = new JLabel("Đang xem");
+            badge.setFont(Theme.font(Font.BOLD, 10));
+            badge.setForeground(Color.WHITE);
+            badge.setOpaque(true);
+            badge.setBackground(new Color(0x1E, 0x29, 0x3B));
+            badge.setBorder(BorderFactory.createEmptyBorder(2, 7, 2, 7));
+            badge.putClientProperty(FlatClientProperties.STYLE, "arc:8");
+            r1.add(badge, BorderLayout.EAST);
+        }
+        r1.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(r1);
+        card.add(Box.createVerticalStrut(4));
+
+        // Row 2: Make + Model + Year
+        JLabel lModel = new JLabel(x.getHangXe() + " " + x.getModel() + " " + x.getNamSanXuat());
+        lModel.setFont(Theme.font(isSelected ? Font.BOLD : Font.PLAIN, 13));
+        lModel.setForeground(Theme.TEXT);
+        lModel.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(lModel);
+        card.add(Box.createVerticalStrut(4));
+
+        // Row 3: Color · ODO [· Chưa có lịch sử]
+        String odoStr = String.format("%,.0f km", x.getSoKmHienTai());
+        List<LichSuSuaChuaRow> hist = KhachHangXeBus.getLichSuSuaChua(x.getBienSo(), Collections.emptyList());
+        String note = (hist == null || hist.isEmpty()) ? " · Chưa có lịch sử" : "";
+        JLabel lSub = UI.muted(x.getMauXe() + " · " + odoStr + note);
+        lSub.setFont(Theme.font(Font.PLAIN, 12));
+        lSub.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(lSub);
+
+        card.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                switchToVehicleHistoryView(x);
+            }
+        });
+
+        return card;
+    }
+
+    private void loadVehicleHistory(Xe xe) {
+        vehHistoryModel.setRowCount(0);
+        currentVehicleHistoryRows.clear();
+
+        List<Xe> dummyList = Collections.singletonList(xe);
+        List<LichSuSuaChuaRow> list = KhachHangXeBus.getLichSuSuaChua(xe.getBienSo(), dummyList);
+        currentVehicleHistoryRows = list != null ? list : new ArrayList<>();
+
+        // 1. Update Stat cards
+        lblHistoryOdoVal.setText(String.format("%,.0f km", xe.getSoKmHienTai()));
+        lblHistoryRepairCount.setText(String.valueOf(currentVehicleHistoryRows.size()));
+
+        if (!currentVehicleHistoryRows.isEmpty()) {
+            lblHistoryLastDate.setText(currentVehicleHistoryRows.get(0).ngay());
+        } else {
+            lblHistoryLastDate.setText("---");
+        }
+
+        // 2. Populate table
+        for (LichSuSuaChuaRow r : currentVehicleHistoryRows) {
+            vehHistoryModel.addRow(new Object[]{
+                    r.ngay(),
+                    r.maPhieuSC(),
+                    r.noiDung(),
+                    r.trangThai()
+            });
+        }
+
+        // 3. Select first row if available, otherwise clear details
+        if (!currentVehicleHistoryRows.isEmpty()) {
+            vehHistoryTable.setRowSelectionInterval(0, 0);
+            populateHistoryDetail(currentVehicleHistoryRows.get(0));
+        } else {
+            clearHistoryDetail();
+        }
+    }
+
+    private void populateHistoryDetail(LichSuSuaChuaRow row) {
+        if (row == null) {
+            clearHistoryDetail();
+            return;
+        }
+        txtHistoryDetailKtv.setText(row.kyThuatVien() != null ? row.kyThuatVien() : "Chưa phân công");
+        txtHistoryDetailDeadline.setText(row.hanHoanThanh() != null ? row.hanHoanThanh() : "---");
+        txtHistoryDetailNotes.setText(row.ghiChuKyThuat() != null ? row.ghiChuKyThuat() : "---");
+        txtHistoryDetailDocs.setText(row.chungTuLienQuan() != null ? row.chungTuLienQuan() : "---");
+    }
+
+    private void clearHistoryDetail() {
+        txtHistoryDetailKtv.setText("---");
+        txtHistoryDetailDeadline.setText("---");
+        txtHistoryDetailNotes.setText("Chưa có lịch sử sửa chữa cho phương tiện này.");
+        txtHistoryDetailDocs.setText("---");
+    }
+
     // =========================================================================
     // FIELD BUILDER HELPERS
     // =========================================================================
@@ -1149,21 +1561,27 @@ public final class KhachHangXePanel extends BasePanel {
         JLabel l = new JLabel(label);
         l.setFont(Theme.font(Font.BOLD, 12));
         l.setForeground(Theme.TEXT);
+        l.setPreferredSize(new Dimension(200, 20));
+        l.setMinimumSize(new Dimension(50, 20));
+        l.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         l.setAlignmentX(LEFT_ALIGNMENT);
         p.add(l);
-        p.add(Box.createVerticalStrut(4));
+        p.add(Box.createVerticalStrut(6));
 
         styleInput(tf, null);
         tf.setAlignmentX(LEFT_ALIGNMENT);
         p.add(tf);
 
-        if (hint != null && !hint.isEmpty()) {
-            p.add(Box.createVerticalStrut(3));
-            JLabel h = UI.muted(hint);
-            h.setFont(Theme.font(Font.PLAIN, 11));
-            h.setAlignmentX(LEFT_ALIGNMENT);
-            p.add(h);
-        }
+        p.add(Box.createVerticalStrut(4));
+        JLabel h = new JLabel(hint != null && !hint.isEmpty() ? hint : " ");
+        h.setFont(Theme.font(Font.PLAIN, 11));
+        h.setForeground(hint != null && !hint.isEmpty() ? Theme.MUTED : new Color(0, 0, 0, 0));
+        h.setPreferredSize(new Dimension(200, 16));
+        h.setMinimumSize(new Dimension(50, 16));
+        h.setMaximumSize(new Dimension(Integer.MAX_VALUE, 16));
+        h.setAlignmentX(LEFT_ALIGNMENT);
+        p.add(h);
+
         p.setAlignmentX(LEFT_ALIGNMENT);
         return p;
     }
@@ -1176,9 +1594,38 @@ public final class KhachHangXePanel extends BasePanel {
         return p;
     }
 
+    private JPanel formFieldDetail(String label, JTextField tf) {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+
+        JLabel l = new JLabel(label);
+        l.setFont(Theme.font(Font.BOLD, 12));
+        l.setForeground(Theme.TEXT);
+        l.setPreferredSize(new Dimension(200, 18));
+        l.setMinimumSize(new Dimension(50, 18));
+        l.setMaximumSize(new Dimension(Integer.MAX_VALUE, 18));
+        l.setAlignmentX(LEFT_ALIGNMENT);
+        p.add(l);
+        p.add(Box.createVerticalStrut(4));
+
+        styleInput(tf, null);
+        tf.setEditable(false);
+        tf.setBackground(new Color(0xF8FAFC));
+        tf.setForeground(Theme.TEXT);
+        tf.setAlignmentX(LEFT_ALIGNMENT);
+        p.add(tf);
+
+        p.setAlignmentX(LEFT_ALIGNMENT);
+        return p;
+    }
+
     private void styleInput(JTextField tf, String placeholder) {
         tf.setFont(Theme.font(Font.PLAIN, 13));
         tf.putClientProperty(FlatClientProperties.STYLE, "arc:10; margin:6,10,6,10; borderColor:#D5DBE5");
+        tf.setPreferredSize(new Dimension(200, 38));
+        tf.setMinimumSize(new Dimension(50, 38));
+        tf.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
         if (placeholder != null) {
             tf.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, placeholder);
         }
