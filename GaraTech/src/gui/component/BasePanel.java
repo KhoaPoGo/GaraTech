@@ -6,9 +6,11 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.Scrollable;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Rectangle;
@@ -36,6 +38,12 @@ public abstract class BasePanel extends JPanel implements Scrollable {
     /** Nội dung chính của màn hình. */
     protected final JPanel body = new JPanel(new BorderLayout());
 
+    protected final JLabel lblEyebrow;
+    protected final JLabel lblTitle;
+    protected final JLabel lblSubtitle;
+    private final Component strutTop;
+    private final Component strutBottom;
+
     protected BasePanel(String eyebrow, String title, String subtitle) {
         setLayout(new BorderLayout(0, 20));
         setBackground(Theme.BG);
@@ -44,15 +52,28 @@ public abstract class BasePanel extends JPanel implements Scrollable {
         JPanel text = new JPanel();
         text.setOpaque(false);
         text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
-        JComponent e = UI.eyebrow(eyebrow);
-        JComponent t = UI.h1(title);
-        JComponent s = UI.muted(subtitle);
-        for (JComponent c : new JComponent[]{e, t, s}) c.setAlignmentX(LEFT_ALIGNMENT);
-        text.add(e);
-        text.add(Box.createVerticalStrut(4));
-        text.add(t);
-        text.add(Box.createVerticalStrut(4));
-        text.add(s);
+
+        boolean hasEyebrow = eyebrow != null && !eyebrow.isBlank();
+        lblEyebrow = UI.eyebrow(hasEyebrow ? eyebrow : "");
+        lblEyebrow.setVisible(hasEyebrow);
+
+        lblTitle = UI.h1(title != null ? title : "");
+
+        boolean hasSubtitle = subtitle != null && !subtitle.isBlank();
+        lblSubtitle = UI.muted(hasSubtitle ? subtitle : "");
+        lblSubtitle.setVisible(hasSubtitle);
+
+        strutTop = Box.createVerticalStrut(4);
+        strutTop.setVisible(hasEyebrow);
+        strutBottom = Box.createVerticalStrut(4);
+        strutBottom.setVisible(hasSubtitle);
+
+        for (JComponent c : new JComponent[]{lblEyebrow, lblTitle, lblSubtitle}) c.setAlignmentX(LEFT_ALIGNMENT);
+        text.add(lblEyebrow);
+        text.add(strutTop);
+        text.add(lblTitle);
+        text.add(strutBottom);
+        text.add(lblSubtitle);
 
         actions.setOpaque(false);
         JPanel header = new JPanel(new BorderLayout());
@@ -63,6 +84,24 @@ public abstract class BasePanel extends JPanel implements Scrollable {
         body.setOpaque(false);
         add(header, BorderLayout.NORTH);
         add(body, BorderLayout.CENTER);
+    }
+
+    public void setHeader(String eyebrow, String title, String subtitle) {
+        if (eyebrow != null) {
+            boolean hasEyebrow = !eyebrow.isBlank();
+            lblEyebrow.setText(eyebrow.toUpperCase());
+            lblEyebrow.setVisible(hasEyebrow);
+            if (strutTop != null) strutTop.setVisible(hasEyebrow);
+        }
+        if (title != null) {
+            lblTitle.setText(title);
+        }
+        if (subtitle != null) {
+            boolean hasSubtitle = !subtitle.isBlank();
+            lblSubtitle.setText(subtitle);
+            lblSubtitle.setVisible(hasSubtitle);
+            if (strutBottom != null) strutBottom.setVisible(hasSubtitle);
+        }
     }
 
     /** Được gọi mỗi lần người dùng mở màn hình này: nạp lại dữ liệu từ CSDL ở đây. */
