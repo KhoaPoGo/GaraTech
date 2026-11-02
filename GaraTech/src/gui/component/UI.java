@@ -55,6 +55,17 @@ public final class UI {
         return b;
     }
 
+    /** Nút cảnh báo / xóa (nền đỏ nhạt, chữ đỏ). */
+    public static JButton dangerButton(String text) {
+        JButton b = new JButton(text);
+        b.setFont(Theme.font(Font.BOLD, 13));
+        b.putClientProperty(FlatClientProperties.STYLE,
+                "background:#FFF1F2; foreground:#E11D48; hoverBackground:#FFE4E6; pressedBackground:#FECDD3;"
+                        + "borderColor:#FECDD3; focusWidth:0; arc:10; margin:9,16,9,16");
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return b;
+    }
+
     public static Border pad(int top, int left, int bottom, int right) {
         return BorderFactory.createEmptyBorder(top, left, bottom, right);
     }
