@@ -1,1 +1,6 @@
-/bin/
+# Biên dịch / IDE
+bin/
+*.class
+.settings/
+# Cấu hình riêng từng máy (chứa mật khẩu SQL Server)
+db.local.properties
