@@ -2,11 +2,20 @@ package gui;
 
 import enums.Role;
 import gui.component.BasePanel;
-import gui.panel.DashBoardPanel;
-import gui.panel.PlaceholderPanel;
-
 import gui.label.CongViecKTVLabel;
 import gui.label.YeuCauPhuTungLabel;
+import gui.panel.BaoCaoPanel;
+import gui.panel.DashBoardPanel;
+import gui.panel.DichVuNhanSuPanel;
+import gui.panel.DieuPhoiPanel;
+import gui.panel.KiemTraChatLuongPanel;
+import gui.panel.KhachHangXePanel;
+import gui.panel.PlaceholderPanel;
+import gui.panel.phieusuachua.PhieuSuaChuaPanel;
+import gui.panel.PhuTungTonKhoPanel;
+import gui.panel.NhapKhoPanel;
+import gui.panel.XuatKhoPanel;
+import gui.panel.tiepnhan.TiepNhanXePanel;
 
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -34,10 +43,10 @@ public enum Screen {
             DashBoardPanel::new),
     DIEU_PHOI("Điều phối & tiến độ", "SV1", EnumSet.of(QUAN_LY),
             "Kanban 5 cột theo trạng thái phiếu; chọn kỹ thuật viên (chuyên môn, rảnh/bận); hạn hoàn thành; khung kiểm soát tiến độ.",
-            null),
+            DieuPhoiPanel::new),
     KIEM_TRA_CL("Kiểm tra chất lượng", "SV1", EnumSet.of(QUAN_LY),
             "2 cột đối chiếu (KTV báo / quản lý kiểm); checklist bắt buộc (đã chạy thử, không rò rỉ nhớt, vệ sinh xe) mới cho chuyển Hoàn thành.",
-            null),
+            KiemTraChatLuongPanel::new),
 
     // ---- Kỹ thuật viên (SV4) ----
     CONG_VIEC_KTV("Công việc của tôi", "SV4", EnumSet.of(KY_THUAT_VIEN),
@@ -51,13 +60,13 @@ public enum Screen {
     // ---- Tiếp nhận (SV2) ----
     KHACH_HANG_XE("Khách hàng & xe", "SV2", EnumSet.of(QUAN_LY, TIEP_NHAN, KY_THUAT_VIEN),
             "Danh sách + chi tiết + lịch sử sửa chữa; popup thêm khách; SĐT 10 số bắt đầu 0; chặn trùng biển số; không xóa nếu đã có chứng từ. KTV chỉ xem.",
-            null),
+            KhachHangXePanel::new),
     TIEP_NHAN_XE("Tiếp nhận xe", "SV2", EnumSet.of(TIEP_NHAN),
             "Chọn khách/xe, số km, mức nhiên liệu, ghi vết xước (bắt buộc); hẹn trả ≥ thời gian tiếp nhận; mã PTN-YYYYMMDD-STT.",
-            null),
+            TiepNhanXePanel::new),
     PHIEU_SUA_CHUA("Lập phiếu sửa chữa", "SV2", EnumSet.of(TIEP_NHAN),
             "Bảng hạng mục (dịch vụ HOẶC phụ tùng); báo giá; Chờ duyệt / Đã xác nhận / Từ chối; checklist phê duyệt; hủy phiếu có lý do.",
-            null),
+            PhieuSuaChuaPanel::new),
     HOA_DON("Hóa đơn", "SV4", EnumSet.of(TIEP_NHAN),
             "Chỉ lập khi phiếu Hoàn thành; tiền công + phụ tùng − giảm giá + VAT 10%; lịch sử thanh toán nhiều lần; in hóa đơn.",
             null),
@@ -68,21 +77,21 @@ public enum Screen {
     // ---- Kho (SV3) ----
     PHU_TUNG_TON_KHO("Phụ tùng & tồn kho", "SV3", EnumSet.of(QUAN_LY, KHO, KY_THUAT_VIEN),
             "Bảng phụ tùng, cột tình trạng xanh/cam/đỏ; bấm 1 món xem lịch sử nhập xuất + người thực hiện; KTV chỉ đọc.",
-            null),
+            PhuTungTonKhoPanel::new),
     NHAP_KHO("Nhập kho", "SV3", EnumSet.of(KHO),
             "Chọn nhà cung cấp; số lượng × đơn giá = thành tiền, tổng lô hàng; cột Tồn trước / Tồn sau; ghi trong 1 transaction.",
-            null),
+            NhapKhoPanel::new),
     XUAT_KHO("Xuất kho", "SV3", EnumSet.of(KHO),
             "Duyệt yêu cầu từ KTV; số lượng xuất > tồn thì báo đỏ và khóa nút xác nhận; gắn với phiếu sửa chữa; transaction.",
-            null),
+            XuatKhoPanel::new),
 
     // ---- Quản lý (SV1) ----
     DICH_VU_NHAN_SU("Dịch vụ & nhân sự", "SV1", EnumSet.of(QUAN_LY),
-            "Tab: Dịch vụ & đơn giá / Nhân viên / Tài khoản / Bảng phân quyền; KHÓA tài khoản thay vì xóa; heSoLuong 1.84–6.5.",
-            null),
+            "Tab: Dịch vụ & đơn giá / Nhân viên / Tài khoản / Bảng phân quyền; KHÓA tài khoản thay vì xóa; heSoLuong 1.0–5.0.",
+            DichVuNhanSuPanel::new),
     BAO_CAO("Báo cáo & thống kê", "SV1", EnumSet.of(QUAN_LY),
             "Lọc từ ngày – đến ngày; thực thu vs còn chờ thu; cơ cấu dịch vụ; nhóm phụ tùng tiêu thụ nhiều.",
-            null);
+            BaoCaoPanel::new);
 
     private final String title;
     private final String owner;

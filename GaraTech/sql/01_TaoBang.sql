@@ -107,8 +107,8 @@ CREATE TABLE PhieuTiepNhan (
     yeuCauKhachHang  NVARCHAR(500) NOT NULL,
     mucNhienLieu     FLOAT         NOT NULL DEFAULT 0,
     soKmTiepNhan     FLOAT         NOT NULL DEFAULT 0,
-    trangThai        NVARCHAR(30)  NOT NULL DEFAULT N'Chờ xử lý',
-    CONSTRAINT CK_PTN_tt  CHECK (trangThai IN (N'Chờ xử lý', N'Đang kiểm tra', N'Chờ khách xác nhận', N'Đã hủy')),
+    trangThai        NVARCHAR(30)  NOT NULL DEFAULT N'Chờ khách hàng xác nhận',
+    CONSTRAINT CK_PTN_tt  CHECK (trangThai IN (N'Chờ khách hàng xác nhận', N'Chờ khách xác nhận', N'Đã xác nhận', N'Đã hủy')),
     CONSTRAINT CK_PTN_gio CHECK (thoiGianHenTra IS NULL OR thoiGianHenTra > thoiGianTiepNhan),
     CONSTRAINT CK_PTN_nl  CHECK (mucNhienLieu >= 0 AND soKmTiepNhan >= 0)
 );
@@ -251,3 +251,6 @@ CREATE TABLE GiaoDichThanhToan (
     CONSTRAINT CK_GD_tt   CHECK (trangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Hủy'))
 );
 GO
+select*from NhanVien
+select*from PhuTung
+SELECT * FROM ChiTietNhapKho
