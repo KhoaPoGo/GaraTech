@@ -1,6 +1,10 @@
 package entity;
 
 public class TaiKhoan {
+	/** Giá trị cột trangThaiDangNhap (khớp CHECK CK_TK_tt trong SQL). */
+	public static final String HOAT_DONG = "Hoạt động";
+	public static final String DANG_KHOA = "Đang khóa";
+
 	private String tenDangNhap;
 	private String matKhau;
 	private String trangThaiDangNhap;
@@ -49,6 +53,10 @@ public class TaiKhoan {
 
 	public void setMaNV(NhanVien maNV) {
 		this.maNV = maNV;
+	}
+
+	public boolean dangKhoa() {
+		return DANG_KHOA.equalsIgnoreCase(trangThaiDangNhap);
 	}
 
 	@Override

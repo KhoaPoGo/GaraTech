@@ -1,5 +1,10 @@
 package gui.panel;
 
+import bus.BaoCaoService;
+import bus.BaoCaoService.Cot;
+import bus.BaoCaoService.DashboardData;
+import dao.BaoCaoDao.TonKhoThap;
+import dao.DieuPhoiDao.PhieuCard;
 import gui.Navigator;
 import gui.Screen;
 import gui.component.BarChartPanel;
@@ -10,9 +15,9 @@ import gui.component.StatusBadge;
 import gui.component.StatusCellRenderer;
 import gui.component.Theme;
 import gui.component.UI;
+import util.Async;
 import util.Fmt;
 import util.RoundedPanel;
-
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -33,19 +38,43 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
 
 /**
- * Màn "Tổng quan quản lý" (mockup "Hình 2") — làm MẪU để cả nhóm xem cách dùng BasePanel và các component chung.
- * Số liệu bên dưới là DỮ LIỆU GIẢ; SV1 sẽ thay bằng truy vấn thật (DAO) ở ngày 4.
+ * Màn "Tổng quan quản lý" (mockup "Hình 2"): số liệu thật từ CSDL, nạp lại mỗi lần mở màn hình.
+ * Mọi truy vấn nằm trong {@link BaoCaoService#dashboard()}.
  */
 public final class DashBoardPanel extends BasePanel {
+    private final BaoCaoService service = new BaoCaoService();
+
     private final DefaultTableModel tableModel =
             UI.readOnlyModel("Phiếu / phương tiện", "Khách hàng", "Kỹ thuật viên", "Trạng thái", "Tiến độ", "Hẹn hoàn thành");
+
+    private final StatCard cTiepNhan = new StatCard("Xe tiếp nhận hôm nay", "—", " ");
+    private final StatCard cDangSua = new StatCard("Đang sửa chữa", "—", " ");
+    private final StatCard cHoanThanh = new StatCard("Hoàn thành kỹ thuật", "—", " ");
+    private final StatCard cDoanhThu = new StatCard("Doanh thu đã thu", "—", " ");
+
+    private final JLabel lbTong7 = UI.label("—", Font.BOLD, 24, Theme.TEXT);
+    private final StatusBadge badgeSoSanh = new StatusBadge("");
+    private final JLabel lbKy = UI.muted(" ");
+    private final BarChartPanel chart = new BarChartPanel();
+
+    private final JPanel alertBody = new JPanel();
+    private final JLabel lbCapNhat = UI.label(" ", Font.PLAIN, 11, Theme.MUTED);
+    private final JButton btnKiemTra = UI.secondaryButton("Kiểm tra chất lượng");
 
     public DashBoardPanel() {
         super("Điều hành gara", "Tổng quan quản lý", "Nắm bắt hoạt động gara và các công việc cần ưu tiên trong ngày.");
 
         actions.add(UI.secondaryButton(Fmt.date(LocalDate.now())));
+        JButton refresh = UI.secondaryButton("Làm mới");
+        refresh.addActionListener(e -> reload());
+        actions.add(refresh);
         JButton go = UI.primaryButton("Điều phối công việc");
         go.addActionListener(e -> Navigator.go(Screen.DIEU_PHOI));
         actions.add(go);
@@ -68,17 +97,93 @@ public final class DashBoardPanel extends BasePanel {
     }
 
     @Override
-    public void onShow() {
-        // TODO(SV1): nạp số liệu thật từ CSDL ở đây (nên chạy bằng SwingWorker).
+    public void onShow() { reload(); }
+
+    private void reload() {
+        Async.run(this, service::dashboard, this::show);
     }
 
+    // ====================================================================== đổ dữ liệu
+    private void show(DashboardData d) {
+        cTiepNhan.setValue(String.valueOf(d.tiepNhanHomNay()), d.phieuChoXuLy() + " phiếu tiếp nhận đang chờ xử lý");
+        cDangSua.setValue(String.valueOf(d.dangSua()), d.quaHan() > 0 ? d.quaHan() + " phiếu đã quá hạn dự kiến" : "Không có phiếu quá hạn");
+        cHoanThanh.setValue(String.valueOf(d.hoanThanhHomNay() + d.daBanGiaoHomNay()),
+                d.daBanGiaoHomNay() + " đã bàn giao · " + d.hoanThanhHomNay() + " chờ bàn giao");
+        cDoanhThu.setValue(Fmt.trieu(d.thuHomNay()), "Chưa thu: " + Fmt.trieu(d.conChoThu()));
+
+        lbTong7.setText(Fmt.money(d.tong7Ngay()));
+        lbKy.setText(DateTimeFormatter.ofPattern("dd/MM").format(d.tuNgay()) + " – " + DateTimeFormatter.ofPattern("dd/MM/yyyy").format(d.denNgay())
+                + " · Đơn vị: triệu đồng");
+        if (d.tong7NgayTruoc() > 0) {
+            double pct = (d.tong7Ngay() - d.tong7NgayTruoc()) * 100.0 / d.tong7NgayTruoc();
+            badgeSoSanh.setStatus(String.format(Locale.ROOT, "%+.1f%% so với kỳ trước", pct).replace('.', ','));
+        } else {
+            badgeSoSanh.setStatus("Chưa có số liệu kỳ trước");
+        }
+        List<Cot> cols = d.bayNgay();
+        String[] nhan = new String[cols.size()];
+        double[] gt = new double[cols.size()];
+        String[] ghi = new String[cols.size()];
+        for (int i = 0; i < cols.size(); i++) {
+            nhan[i] = cols.get(i).nhan();
+            gt[i] = cols.get(i).giaTri() / 1_000_000.0;
+            ghi[i] = cols.get(i).giaTri() == 0 ? "0" : String.format(Locale.ROOT, "%.1ftr", gt[i]).replace('.', ',');
+        }
+        chart.setData(nhan, gt, ghi);
+
+        fillAlerts(d);
+        fillActive(d.phieuDangHoatDong());
+        btnKiemTra.setText("Kiểm tra chất lượng · " + d.choKiemTra() + " xe");
+        lbCapNhat.setText("Cập nhật lúc " + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")));
+        revalidate();
+        repaint();
+    }
+
+    private void fillAlerts(DashboardData d) {
+        alertBody.removeAll();
+        int cham = d.khoCanhBao().chamNguong(), het = d.khoCanhBao().hetHang();
+        boolean ok = cham + het == 0;
+        RoundedPanel warn = ok
+                ? new RoundedPanel(10, Theme.SUCCESS_BG).borderColor(new Color(0xBFE6D1))
+                : new RoundedPanel(10, Theme.WARN_BG).borderColor(new Color(0xF5DFA0));
+        warn.setLayout(new BorderLayout());
+        warn.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+        String text = ok ? "Tồn kho ổn định, chưa có phụ tùng nào chạm mức tối thiểu."
+                : cham + " phụ tùng chạm mức tối thiểu; " + het + " phụ tùng đã hết hàng.";
+        JLabel wt = new JLabel("<html><body style='width:220px'>" + text + "</body></html>");
+        wt.setFont(Theme.font(Font.PLAIN, 12));
+        wt.setForeground(ok ? Theme.SUCCESS : Theme.WARN);
+        warn.add(wt, BorderLayout.CENTER);
+        warn.setAlignmentX(LEFT_ALIGNMENT);
+        warn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 64));
+        alertBody.add(warn);
+        alertBody.add(Box.createVerticalStrut(12));
+        for (TonKhoThap t : d.khoCanhBao().top())
+            alertBody.add(stockRow(t.ten(), "Tồn " + t.ton() + " / Tối thiểu " + t.toiThieu()));
+        alertBody.revalidate();
+        alertBody.repaint();
+    }
+
+    private void fillActive(List<PhieuCard> ds) {
+        tableModel.setRowCount(0);
+        LocalDateTime now = LocalDateTime.now();
+        for (PhieuCard p : ds) {
+            String two = "<html><b>" + p.maPhieuSC() + "</b><br><span style='color:#6B7A90'>" + p.bienSo() + " · " + p.tenXe() + "</span></html>";
+            String han = p.duKien() == null ? "Chưa đặt hạn"
+                    : DateTimeFormatter.ofPattern("dd/MM · HH:mm").format(p.duKien()) + (p.quaHan(now) ? " (quá hạn)" : "");
+            tableModel.addRow(new Object[]{two, p.tenKhach(), p.tenKTV() == null ? "Chưa phân công" : p.tenKTV(),
+                    p.trangThai().label(), p.tienDo(), han});
+        }
+    }
+
+    // ====================================================================== khối giao diện
     private JComponent statRow() {
         JPanel row = new JPanel(new GridLayout(1, 4, 16, 0));
         row.setOpaque(false);
-        row.add(new StatCard("Xe tiếp nhận hôm nay", "12", "8 khách cũ · 4 khách mới"));
-        row.add(new StatCard("Đang sửa chữa", "8", "2 xe đến hạn trong hôm nay"));
-        row.add(new StatCard("Hoàn thành kỹ thuật", "5", "3 xe đã bàn giao · 2 chờ thanh toán"));
-        row.add(new StatCard("Doanh thu đã thu", "18,6 tr", "Không gồm 6,76 tr chưa thanh toán"));
+        row.add(cTiepNhan);
+        row.add(cDangSua);
+        row.add(cHoanThanh);
+        row.add(cDoanhThu);
         return row;
     }
 
@@ -111,23 +216,16 @@ public final class DashBoardPanel extends BasePanel {
         sum.setLayout(new BoxLayout(sum, BoxLayout.Y_AXIS));
         JPanel line = new JPanel(new BorderLayout());
         line.setOpaque(false);
-        line.add(UI.label(Fmt.money(112_400_000L), Font.BOLD, 24, Theme.TEXT), BorderLayout.WEST);
+        line.add(lbTong7, BorderLayout.WEST);
         JPanel badgeWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         badgeWrap.setOpaque(false);
-        badgeWrap.add(new StatusBadge("Đã thanh toán") {{ setText("+12,4% so với kỳ trước"); }});
+        badgeWrap.add(badgeSoSanh);
         line.add(badgeWrap, BorderLayout.EAST);
         line.setAlignmentX(LEFT_ALIGNMENT);
-        JLabel sub = UI.muted("30/09 – 06/10/2026 · Đơn vị: triệu đồng");
-        sub.setAlignmentX(LEFT_ALIGNMENT);
+        lbKy.setAlignmentX(LEFT_ALIGNMENT);
         sum.add(line);
         sum.add(Box.createVerticalStrut(2));
-        sum.add(sub);
-
-        BarChartPanel chart = new BarChartPanel();
-        chart.setData(
-                new String[]{"30/09", "01/10", "02/10", "03/10", "04/10", "05/10", "06/10"},
-                new double[]{12.4, 16.8, 14.2, 20.1, 13.7, 16.6, 18.6},
-                new String[]{"12.4tr", "16.8tr", "14.2tr", "20.1tr", "13.7tr", "16.6tr", "18.6tr"});
+        sum.add(lbKy);
 
         JPanel top = new JPanel(new BorderLayout(0, 6));
         top.setOpaque(false);
@@ -152,21 +250,10 @@ public final class DashBoardPanel extends BasePanel {
         card.add(head);
         card.add(Box.createVerticalStrut(12));
 
-        RoundedPanel warn = new RoundedPanel(10, Theme.WARN_BG).borderColor(new Color(0xF5DFA0));
-        warn.setLayout(new BorderLayout());
-        warn.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
-        JLabel wt = new JLabel("<html><body style='width:220px'>3 phụ tùng chạm mức tối thiểu; 1 phụ tùng đã hết hàng.</body></html>");
-        wt.setFont(Theme.font(Font.PLAIN, 12));
-        wt.setForeground(Theme.WARN);
-        warn.add(wt, BorderLayout.CENTER);
-        warn.setAlignmentX(LEFT_ALIGNMENT);
-        warn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 64));
-        card.add(warn);
-        card.add(Box.createVerticalStrut(12));
-
-        card.add(stockRow("Lọc dầu OF-01", "Tồn 2 / Tối thiểu 5"));
-        card.add(stockRow("Má phanh BP-02", "Tồn 1 / Tối thiểu 3"));
-        card.add(stockRow("Bugi SP-04", "Tồn 0 / Tối thiểu 4"));
+        alertBody.setOpaque(false);
+        alertBody.setLayout(new BoxLayout(alertBody, BoxLayout.Y_AXIS));
+        alertBody.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(alertBody);
         card.add(Box.createVerticalStrut(10));
 
         JButton open = UI.secondaryButton("Mở cảnh báo tồn kho");
@@ -175,9 +262,8 @@ public final class DashBoardPanel extends BasePanel {
         card.add(open);
         card.add(Box.createVerticalGlue());
         card.add(Box.createVerticalStrut(10));
-        JLabel foot = UI.label("Kho cập nhật lần cuối lúc 10:15", Font.PLAIN, 11, Theme.MUTED);
-        foot.setAlignmentX(LEFT_ALIGNMENT);
-        card.add(foot);
+        lbCapNhat.setAlignmentX(LEFT_ALIGNMENT);
+        card.add(lbCapNhat);
         return card;
     }
 
@@ -203,12 +289,6 @@ public final class DashBoardPanel extends BasePanel {
         head.add(link("Điều phối & tiến độ →", () -> Navigator.go(Screen.DIEU_PHOI)), BorderLayout.EAST);
         card.add(head, BorderLayout.NORTH);
 
-        // Dữ liệu giả — thay bằng PhieuSuaChuaDAO.findActive() khi làm thật
-        addRow("PSC-20261006-001", "51H-12345 · Toyota Vios", "Nguyễn Minh Anh", "Nguyễn Văn Nam", "Đang sửa chữa", 65, "06/10 · 16:30");
-        addRow("PSC-20261006-002", "51G-67890 · Honda City", "Trần Quốc Bảo", "Lê Đức Hùng", "Chờ kiểm tra", 100, "06/10 · 15:00");
-        addRow("PSC-20261006-003", "60A-24680 · Mazda 3", "Lê Hoàng Lan", "Phạm Tuấn Đạt", "Đã xác nhận", 0, "07/10 · 10:00");
-        addRow("PSC-20261005-012", "51F-45678 · Ford Ranger", "Vũ Đức Long", "Nguyễn Văn Nam", "Đang sửa chữa", 80, "06/10 · 17:00");
-
         JTable t = UI.table(tableModel);
         t.setRowHeight(58);
         t.getColumnModel().getColumn(3).setCellRenderer(new StatusCellRenderer());
@@ -219,21 +299,15 @@ public final class DashBoardPanel extends BasePanel {
         return card;
     }
 
-    private void addRow(String phieu, String xe, String kh, String ktv, String tt, int pct, String han) {
-        String two = "<html><b>" + phieu + "</b><br><span style='color:#6B7A90'>" + xe + "</span></html>";
-        tableModel.addRow(new Object[]{two, kh, ktv, tt, pct, han});
-    }
-
     private JComponent shortcutRow() {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
         row.setOpaque(false);
-        JButton a = UI.secondaryButton("Kiểm tra chất lượng · 2 xe");
-        a.addActionListener(e -> Navigator.go(Screen.KIEM_TRA_CL));
+        btnKiemTra.addActionListener(e -> Navigator.go(Screen.KIEM_TRA_CL));
         JButton b = UI.secondaryButton("Báo cáo trong ngày");
         b.addActionListener(e -> Navigator.go(Screen.BAO_CAO));
         JButton c = UI.secondaryButton("Quản lý nhân sự");
         c.addActionListener(e -> Navigator.go(Screen.DICH_VU_NHAN_SU));
-        row.add(a); row.add(b); row.add(c);
+        row.add(btnKiemTra); row.add(b); row.add(c);
         return row;
     }
 
