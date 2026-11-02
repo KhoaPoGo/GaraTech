@@ -113,7 +113,7 @@ public final class MainFrame extends JFrame {
         if (!Msg.confirm(this, "Bạn có chắc muốn đăng xuất?")) return;
         Session.logout();
         dispose();
-        new LoginFrame().setVisible(true);
+        main.Main.showLogin();
     }
 
     /** Hình tròn chứa chữ cái đầu của tên người dùng. */

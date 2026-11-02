@@ -84,11 +84,12 @@ public final class Theme {
         String s = status == null ? "" : status.trim().toLowerCase();
         return switch (s) {
             case "đang sửa chữa", "chờ duyệt", "chờ thanh toán", "chờ xử lý", "chờ xác nhận",
-                 "sắp hết", "chạm ngưỡng", "đang kiểm tra" -> new Color[]{WARN_BG, WARN};
+                 "sắp hết", "chạm ngưỡng", "đang kiểm tra", "chờ khách duyệt", "chưa thanh toán",
+                 "đã thanh toán một phần" -> new Color[]{WARN_BG, WARN};
             case "chờ kiểm tra", "đã xác nhận", "chờ khách xác nhận", "đã phân công" -> new Color[]{INFO_BG, INFO};
-            case "hoàn thành", "đã thanh toán", "đã xuất kho", "đủ hàng", "đã bàn giao", "rảnh", "sẵn sàng" ->
+            case "hoàn thành", "đã thanh toán", "đã xuất kho", "đủ hàng", "đã bàn giao", "rảnh", "sẵn sàng", "hoạt động" ->
                     new Color[]{SUCCESS_BG, SUCCESS};
-            case "đã hủy", "hủy", "từ chối", "hết hàng", "bị khóa" -> new Color[]{DANGER_BG, DANGER};
+            case "đã hủy", "hủy", "từ chối", "hết hàng", "bị khóa", "đang khóa" -> new Color[]{DANGER_BG, DANGER};
             default -> new Color[]{NEUTRAL_BG, NEUTRAL};
         };
     }
