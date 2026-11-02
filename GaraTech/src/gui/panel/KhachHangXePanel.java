@@ -173,10 +173,11 @@ public final class KhachHangXePanel extends BasePanel {
     private KhachHang customerForAddingVehicle = null;
     private Xe vehicleToEdit = null;
     private String selectedHistoryFilter = "ALL";
+    private boolean returnToTiepNhan = false;
+    private String pendingPlateFromTiepNhan = null;
 
     public KhachHangXePanel() {
-        super("GARATECH / KHÁCH HÀNG & XE", "Khách hàng & phương tiện",
-                "Tra cứu hồ sơ khách hàng, phương tiện và lịch sử sửa chữa được liên kết.");
+        super("", "Khách hàng & phương tiện", "");
 
         boolean canEdit = Session.role() == null || Session.role() == Role.TIEP_NHAN || Session.role() == Role.QUAN_LY;
 
@@ -219,6 +220,26 @@ public final class KhachHangXePanel extends BasePanel {
 
     @Override
     public void onShow() {
+        Object p = Navigator.consumePayload();
+        if (p instanceof Navigator.TiepNhanAddCustomerRequest req) {
+            this.returnToTiepNhan = true;
+            this.pendingPlateFromTiepNhan = null;
+            switchToAddCustomerView();
+            if (req.initialQuery() != null && !req.initialQuery().isBlank()) {
+                String q = req.initialQuery().trim();
+                if (q.matches("^[0-9+]+$") || q.startsWith("0")) {
+                    txtAddCustPhone.setText(q);
+                    txtAddCustName.requestFocus();
+                } else if (util.Validator.bienSo(q) || q.matches("^[0-9]{2}[A-Za-z].*")) {
+                    this.pendingPlateFromTiepNhan = q.toUpperCase();
+                    txtAddCustName.requestFocus();
+                } else {
+                    txtAddCustName.setText(q);
+                    txtAddCustPhone.requestFocus();
+                }
+            }
+            return;
+        }
         loadData();
     }
 
@@ -548,6 +569,7 @@ public final class KhachHangXePanel extends BasePanel {
         JButton btnCheckIn = UI.primaryButton("Tiếp nhận xe");
         btnCheckIn.addActionListener(e -> {
             // Chuyển thẳng sang bước lập Phiếu tiếp nhận với xe này
+            Navigator.setPayload(xe);
             Navigator.go(Screen.TIEP_NHAN_XE);
         });
 
@@ -859,6 +881,14 @@ public final class KhachHangXePanel extends BasePanel {
             KhachHangXeBus.themXeChoKhachHang(newXe);
 
             Msg.info(this, "Đã thêm phương tiện " + plate + " cho khách hàng " + customerForAddingVehicle.getHoTen() + "!");
+
+            if (returnToTiepNhan) {
+                returnToTiepNhan = false;
+                pendingPlateFromTiepNhan = null;
+                Navigator.setPayload(newXe);
+                Navigator.go(Screen.TIEP_NHAN_XE);
+                return;
+            }
 
             // Switch to main view and select this customer
             switchToMainView();
@@ -1273,8 +1303,7 @@ public final class KhachHangXePanel extends BasePanel {
     // NAVIGATION METHODS
     // =========================================================================
     private void switchToMainView() {
-        setHeader("GARATECH / KHÁCH HÀNG & XE", "Khách hàng & phương tiện",
-                "Tra cứu hồ sơ khách hàng, phương tiện và lịch sử sửa chữa được liên kết.");
+        setHeader("", "Khách hàng & phương tiện", "");
         actions.removeAll();
         actions.add(btnAddCustomerHeader);
         actions.revalidate();
@@ -1283,11 +1312,18 @@ public final class KhachHangXePanel extends BasePanel {
     }
 
     private void switchToAddCustomerView() {
-        setHeader("GARATECH / KHÁCH HÀNG & XE", "Thêm khách hàng",
-                "Nhập thông tin bắt buộc và kiểm tra trước khi lưu hồ sơ mới.");
+        setHeader("", "Thêm khách hàng", "");
         actions.removeAll();
         JButton btnBack = UI.secondaryButton("← Quay lại");
-        btnBack.addActionListener(e -> switchToMainView());
+        btnBack.addActionListener(e -> {
+            if (returnToTiepNhan) {
+                returnToTiepNhan = false;
+                pendingPlateFromTiepNhan = null;
+                Navigator.go(Screen.TIEP_NHAN_XE);
+            } else {
+                switchToMainView();
+            }
+        });
         actions.add(btnBack);
         actions.revalidate();
         actions.repaint();
@@ -1304,12 +1340,19 @@ public final class KhachHangXePanel extends BasePanel {
 
     private void switchToAddVehicleView(KhachHang kh) {
         this.customerForAddingVehicle = kh;
-        setHeader("GARATECH / KHÁCH HÀNG & XE", "Thêm xe cho khách hàng hiện có",
-                "Bổ sung phương tiện vào hồ sơ " + kh.getHoTen() + ". Không cần nhập lại thông tin khách hàng.");
+        setHeader("", "Thêm xe cho khách hàng hiện có", "");
 
         actions.removeAll();
         JButton btnBack = UI.secondaryButton("Mục lục →");
-        btnBack.addActionListener(e -> switchToMainView());
+        btnBack.addActionListener(e -> {
+            if (returnToTiepNhan) {
+                returnToTiepNhan = false;
+                pendingPlateFromTiepNhan = null;
+                Navigator.go(Screen.TIEP_NHAN_XE);
+            } else {
+                switchToMainView();
+            }
+        });
         actions.add(btnBack);
         actions.revalidate();
         actions.repaint();
@@ -1334,7 +1377,7 @@ public final class KhachHangXePanel extends BasePanel {
         lblAddVehCountStat.setText(existingVehicles.size() + " xe");
 
         // Clear inputs
-        txtAddVehPlate.setText("");
+        txtAddVehPlate.setText(pendingPlateFromTiepNhan != null ? pendingPlateFromTiepNhan : "");
         txtAddVehMakeModel.setText("");
         txtAddVehYear.setText(String.valueOf(LocalDate.now().getYear()));
         txtAddVehColor.setText("");
@@ -1349,12 +1392,19 @@ public final class KhachHangXePanel extends BasePanel {
         this.vehicleToEdit = xe;
         this.editVehPreviousOdo = xe.getSoKmHienTai();
 
-        setHeader("GARATECH / KHÁCH HÀNG & XE", "Chỉnh sửa phương tiện",
-                "Liên kết mỗi xe với một chủ xe hợp lệ trước khi tiếp nhận.");
+        setHeader("", "Chỉnh sửa phương tiện", "");
 
         actions.removeAll();
         JButton btnBack = UI.secondaryButton("Mục lục →");
-        btnBack.addActionListener(e -> switchToMainView());
+        btnBack.addActionListener(e -> {
+            if (returnToTiepNhan) {
+                returnToTiepNhan = false;
+                pendingPlateFromTiepNhan = null;
+                Navigator.go(Screen.TIEP_NHAN_XE);
+            } else {
+                switchToMainView();
+            }
+        });
         actions.add(btnBack);
         actions.revalidate();
         actions.repaint();
@@ -1393,11 +1443,19 @@ public final class KhachHangXePanel extends BasePanel {
         String subtitle = String.format("Khách %s %s · SĐT %s · %d điểm · %d xe · Đang xem %s",
                 custName, custCode, phone, points, countVeh, currentVehInfo);
 
-        setHeader("GARATECH / KHÁCH HÀNG & XE", "Hồ sơ xe và lịch sử sửa chữa", subtitle);
+        setHeader("", "Hồ sơ xe và lịch sử sửa chữa", "");
 
         actions.removeAll();
         JButton btnBack = UI.secondaryButton("Mục lục →");
-        btnBack.addActionListener(e -> switchToMainView());
+        btnBack.addActionListener(e -> {
+            if (returnToTiepNhan) {
+                returnToTiepNhan = false;
+                pendingPlateFromTiepNhan = null;
+                Navigator.go(Screen.TIEP_NHAN_XE);
+            } else {
+                switchToMainView();
+            }
+        });
         actions.add(btnBack);
         actions.revalidate();
         actions.repaint();

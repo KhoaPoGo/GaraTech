@@ -1,10 +1,9 @@
 package enums;
 
-/** Trạng thái PhieuTiepNhan (class spec 2.5). Chuỗi label phải khớp đúng giá trị lưu trong CSDL. */
+/** Trạng thái PhieuTiepNhan (3 trạng thái). Chuỗi label khớp đúng giá trị lưu trong CSDL. */
 public enum TrangThaiPhieuTiepNhan {
-    CHO_XU_LY("Chờ xử lý"),
-    DANG_KIEM_TRA("Đang kiểm tra"),
-    CHO_KHACH_XAC_NHAN("Chờ khách xác nhận"),
+    CHO_KHACH_HANG_XAC_NHAN("Chờ khách hàng xác nhận"),
+    DA_XAC_NHAN("Đã xác nhận"),
     DA_HUY("Đã hủy");
 
     private final String label;
@@ -17,8 +16,12 @@ public enum TrangThaiPhieuTiepNhan {
 
     public static TrangThaiPhieuTiepNhan fromLabel(String s) {
         if (s == null) return null;
+        String trimmed = s.trim();
+        if (trimmed.equalsIgnoreCase("Chờ khách xác nhận") || trimmed.equalsIgnoreCase("Chờ khách hàng xác nhận")) {
+            return CHO_KHACH_HANG_XAC_NHAN;
+        }
         for (TrangThaiPhieuTiepNhan t : values()) {
-            if (t.label.equalsIgnoreCase(s.trim())) return t;
+            if (t.label.equalsIgnoreCase(trimmed)) return t;
         }
         return null;
     }

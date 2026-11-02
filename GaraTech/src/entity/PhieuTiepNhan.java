@@ -3,113 +3,127 @@ package entity;
 import java.time.LocalDateTime;
 
 public class PhieuTiepNhan {
-	private String maPhieuTN;
-	private LocalDateTime thoiGianTiepNhan;
-	private LocalDateTime thoiGianHienTra;
-	private String tinhTrangBanDau;
-	private float mucNhienLieu;
-	private float soKMTiepNhan;
-	private KhachHang khachHang;
-	private NhanVien nhanVien;
-	private String trangThai;
-	
-	public PhieuTiepNhan() {
-		
-	}
-	
-	public PhieuTiepNhan(String maPhieuTN, LocalDateTime thoiGianTiepNhan, LocalDateTime thoiGianHienTra,
-			String tinhTrangBanDau, float mucNhienLieu, float soKMTiepNhan, KhachHang khachHang, NhanVien nhanVien,
-			String trangThai) {
-		super();
-		this.maPhieuTN = maPhieuTN;
-		this.thoiGianTiepNhan = thoiGianTiepNhan;
-		this.thoiGianHienTra = thoiGianHienTra;
-		this.tinhTrangBanDau = tinhTrangBanDau;
-		this.mucNhienLieu = mucNhienLieu;
-		this.soKMTiepNhan = soKMTiepNhan;
-		this.khachHang = khachHang;
-		this.nhanVien = nhanVien;
-		this.trangThai = trangThai;
-	}
+    private String maPhieuTN;
+    private Xe xe;
+    private KhachHang khachHang;
+    private NhanVien nhanVien;
+    private LocalDateTime thoiGianTiepNhan;
+    private LocalDateTime thoiGianHenTra;
+    private String tinhTrangBanDau;
+    private String yeuCauKhachHang;
+    private float mucNhienLieu;
+    private float soKmTiepNhan;
+    private String trangThai;
 
-	public String getMaPhieuTN() {
-		return maPhieuTN;
-	}
+    public PhieuTiepNhan() {
+    }
 
-	public void setMaPhieuTN(String maPhieuTN) {
-		this.maPhieuTN = maPhieuTN;
-	}
+    public PhieuTiepNhan(String maPhieuTN, Xe xe, KhachHang khachHang, NhanVien nhanVien,
+                         LocalDateTime thoiGianTiepNhan, LocalDateTime thoiGianHenTra,
+                         String tinhTrangBanDau, String yeuCauKhachHang,
+                         float mucNhienLieu, float soKmTiepNhan, String trangThai) {
+        this.maPhieuTN = maPhieuTN;
+        this.xe = xe;
+        this.khachHang = khachHang;
+        this.nhanVien = nhanVien;
+        this.thoiGianTiepNhan = thoiGianTiepNhan;
+        this.thoiGianHenTra = thoiGianHenTra;
+        this.tinhTrangBanDau = tinhTrangBanDau;
+        this.yeuCauKhachHang = yeuCauKhachHang;
+        this.mucNhienLieu = mucNhienLieu;
+        this.soKmTiepNhan = soKmTiepNhan;
+        this.trangThai = trangThai;
+    }
 
-	public LocalDateTime getThoiGianTiepNhan() {
-		return thoiGianTiepNhan;
-	}
+    public String getMaPhieuTN() {
+        return maPhieuTN;
+    }
 
-	public void setThoiGianTiepNhan(LocalDateTime thoiGianTiepNhan) {
-		this.thoiGianTiepNhan = thoiGianTiepNhan;
-	}
+    public void setMaPhieuTN(String maPhieuTN) {
+        this.maPhieuTN = maPhieuTN;
+    }
 
-	public LocalDateTime getThoiGianHienTra() {
-		return thoiGianHienTra;
-	}
+    public Xe getXe() {
+        return xe;
+    }
 
-	public void setThoiGianHienTra(LocalDateTime thoiGianHienTra) {
-		this.thoiGianHienTra = thoiGianHienTra;
-	}
+    public void setXe(Xe xe) {
+        this.xe = xe;
+    }
 
-	public String getTinhTrangBanDau() {
-		return tinhTrangBanDau;
-	}
+    public KhachHang getKhachHang() {
+        return khachHang;
+    }
 
-	public void setTinhTrangBanDau(String tinhTrangBanDau) {
-		this.tinhTrangBanDau = tinhTrangBanDau;
-	}
+    public void setKhachHang(KhachHang khachHang) {
+        this.khachHang = khachHang;
+    }
 
-	public float getMucNhienLieu() {
-		return mucNhienLieu;
-	}
+    public NhanVien getNhanVien() {
+        return nhanVien;
+    }
 
-	public void setMucNhienLieu(float mucNhienLieu) {
-		this.mucNhienLieu = mucNhienLieu;
-	}
+    public void setNhanVien(NhanVien nhanVien) {
+        this.nhanVien = nhanVien;
+    }
 
-	public float getSoKMTiepNhan() {
-		return soKMTiepNhan;
-	}
+    public LocalDateTime getThoiGianTiepNhan() {
+        return thoiGianTiepNhan;
+    }
 
-	public void setSoKMTiepNhan(float soKMTiepNhan) {
-		this.soKMTiepNhan = soKMTiepNhan;
-	}
+    public void setThoiGianTiepNhan(LocalDateTime thoiGianTiepNhan) {
+        this.thoiGianTiepNhan = thoiGianTiepNhan;
+    }
 
-	public KhachHang getKhachHang() {
-		return khachHang;
-	}
+    public LocalDateTime getThoiGianHenTra() {
+        return thoiGianHenTra;
+    }
 
-	public void setKhachHang(KhachHang khachHang) {
-		this.khachHang = khachHang;
-	}
+    public void setThoiGianHenTra(LocalDateTime thoiGianHenTra) {
+        this.thoiGianHenTra = thoiGianHenTra;
+    }
 
-	public NhanVien getNhanVien() {
-		return nhanVien;
-	}
+    public String getTinhTrangBanDau() {
+        return tinhTrangBanDau;
+    }
 
-	public void setNhanVien(NhanVien nhanVien) {
-		this.nhanVien = nhanVien;
-	}
+    public void setTinhTrangBanDau(String tinhTrangBanDau) {
+        this.tinhTrangBanDau = tinhTrangBanDau;
+    }
 
-	public String getTrangThai() {
-		return trangThai;
-	}
+    public String getYeuCauKhachHang() {
+        return yeuCauKhachHang;
+    }
 
-	public void setTrangThai(String trangThai) {
-		this.trangThai = trangThai;
-	}
+    public void setYeuCauKhachHang(String yeuCauKhachHang) {
+        this.yeuCauKhachHang = yeuCauKhachHang;
+    }
 
-	public void taoPhieu() {
-		
-	}
-	
-	public void capNhatTrangThai(String trangThaiMoi) {
-		this.trangThai=trangThaiMoi;
-	}
+    public float getMucNhienLieu() {
+        return mucNhienLieu;
+    }
 
+    public void setMucNhienLieu(float mucNhienLieu) {
+        this.mucNhienLieu = mucNhienLieu;
+    }
+
+    public float getSoKmTiepNhan() {
+        return soKmTiepNhan;
+    }
+
+    public void setSoKmTiepNhan(float soKmTiepNhan) {
+        this.soKmTiepNhan = soKmTiepNhan;
+    }
+
+    public String getTrangThai() {
+        return trangThai;
+    }
+
+    public void setTrangThai(String trangThai) {
+        this.trangThai = trangThai;
+    }
+
+    public void capNhatTrangThai(String trangThaiMoi) {
+        this.trangThai = trangThaiMoi;
+    }
 }
