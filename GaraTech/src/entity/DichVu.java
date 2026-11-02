@@ -9,6 +9,8 @@ public class DichVu {
 	private double tienCong;
 	private String capDoBaoDuong;
 	private String trangThai;
+	/** Giờ công ước tính (cột thoiGianUocTinh, đơn vị: giờ). */
+	private double thoiGianUocTinh;
 
 	public DichVu(String maDichVu) {
 		super();
@@ -24,6 +26,20 @@ public class DichVu {
 		this.tienCong = tienCong;
 		this.capDoBaoDuong = capDoBaoDuong;
 		this.trangThai = trangThai;
+	}
+
+	public DichVu(String maDichVu, String tenDichVu, String moTa, double tienCong, double thoiGianUocTinh,
+			String capDoBaoDuong, String trangThai) {
+		this(maDichVu, tenDichVu, moTa, tienCong, capDoBaoDuong, trangThai);
+		this.thoiGianUocTinh = thoiGianUocTinh;
+	}
+
+	public double getThoiGianUocTinh() {
+		return thoiGianUocTinh;
+	}
+
+	public void setThoiGianUocTinh(double thoiGianUocTinh) {
+		this.thoiGianUocTinh = thoiGianUocTinh;
 	}
 
 	public String getMaDichVu() {

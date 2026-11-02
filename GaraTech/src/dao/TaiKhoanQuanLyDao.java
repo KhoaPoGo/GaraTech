@@ -47,8 +47,8 @@ public class TaiKhoanQuanLyDao {
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 out.add(new NhanVien(rs.getString("maNV"), rs.getString("hoTen"), rs.getString("soDienThoai"),
-                        rs.getString("email"), rs.getString("diaChi"), Role.fromDb(rs.getString("vaiTro")),
-                        rs.getBigDecimal("heSoLuong").doubleValue(), rs.getLong("luongCoBan"), rs.getBoolean("dangLam")));
+                        rs.getString("email"), rs.getString("diaChi"), rs.getString("vaiTro"),
+                        rs.getBigDecimal("heSoLuong").doubleValue(), rs.getInt("luongCoBan"), rs.getBoolean("dangLam")));
             }
         }
         return out;
