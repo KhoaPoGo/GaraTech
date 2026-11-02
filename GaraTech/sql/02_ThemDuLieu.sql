@@ -29,3 +29,5 @@ INSERT INTO NhaCungCap(maNCC,tenNCC,soDienThoai,diaChi) VALUES ('NCC001',N'Công
 INSERT INTO KhachHang(maKH,hoTen,soDienThoai,diaChi) VALUES ('KH-2610-001',N'Võ Văn Em','0912345678',N'Q.10, TP.HCM');
 INSERT INTO Xe(bienSo,maKH,hangXe,model,namSanXuat,mauXe,soKmHienTai) VALUES ('51A-123.45','KH-2610-001',N'Toyota',N'Vios',2020,N'Trắng',45000);
 GO
+
+UPDATE PhuTung SET donGiaNhap = 120000 WHERE maPhuTung = 'PT0001';

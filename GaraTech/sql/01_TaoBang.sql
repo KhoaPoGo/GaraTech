@@ -251,3 +251,6 @@ CREATE TABLE GiaoDichThanhToan (
     CONSTRAINT CK_GD_tt   CHECK (trangThai IN (N'Chờ thanh toán', N'Đã thanh toán', N'Hủy'))
 );
 GO
+select*from NhanVien
+select*from PhuTung
+SELECT * FROM ChiTietNhapKho
