@@ -22,6 +22,16 @@ public final class Fmt {
 
     public static String date(LocalDate d) { return d == null ? "" : d.format(DMY); }
 
+    /** "dd/MM/yyyy HH:mm" (rỗng nếu null). */
+    public static String dateTime(java.time.LocalDateTime t) {
+        return t == null ? "" : t.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+    }
+
+    /** 18600000 -> "18,6 tr" (dùng cho số tròn triệu trên biểu đồ / ô thống kê). */
+    public static String trieu(long v) {
+        return String.format(Locale.ROOT, "%.1f", v / 1_000_000.0).replace('.', ',') + " tr";
+    }
+
     /** "Thứ Bảy, 31/10/2026" */
     public static String weekdayDate(LocalDate d) {
         return weekday(d.getDayOfWeek()) + ", " + date(d);
