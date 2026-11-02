@@ -276,7 +276,7 @@ public final class DichVuNhanSuPanel extends BasePanel {
             NhanVien n = current();
             btnSua.setEnabled(n != null);
             btnNghi.setEnabled(n != null);
-            if (n != null) btnNghi.setText(n.dangLam() ? "Cho nghỉ việc" : "Cho làm lại");
+            if (n != null) btnNghi.setText(n.isDangLam() ? "Cho nghỉ việc" : "Cho làm lại");
         }
 
         @Override void reload() {
@@ -284,9 +284,9 @@ public final class DichVuNhanSuPanel extends BasePanel {
                 data = list;
                 model.setRowCount(0);
                 for (NhanVien n : list) {
-                    model.addRow(new Object[]{n.maNV(), n.hoTen(), n.vaiTro() == null ? "?" : n.vaiTro().displayName(),
-                            n.soDienThoai(), n.email(), String.format(Locale.ROOT, "%.2f", n.heSoLuong()).replace('.', ','),
-                            Fmt.money(n.luongCoBan()), n.dangLam() ? "Hoạt động" : TT_NGHI});
+                    model.addRow(new Object[]{n.getMaNV(), n.getHoTen(), n.getRole() == null ? "?" : n.getRole().displayName(),
+                            n.getSoDienThoai(), n.getEmail(), String.format(Locale.ROOT, "%.2f", n.getHeSoLuong()).replace('.', ','),
+                            Fmt.money(n.getLuongCoBan()), n.isDangLam() ? "Hoạt động" : TT_NGHI});
                 }
                 filled();
             });
@@ -295,31 +295,31 @@ public final class DichVuNhanSuPanel extends BasePanel {
         private void toggle() {
             NhanVien n = current();
             if (n == null) return;
-            boolean nghi = n.dangLam();
+            boolean nghi = n.isDangLam();
             String hoi = nghi
-                    ? "Cho " + n.hoTen() + " (" + n.maNV() + ") nghỉ việc?\nNhân viên sẽ không đăng nhập được nữa nhưng dữ liệu cũ vẫn được giữ."
-                    : "Cho " + n.hoTen() + " (" + n.maNV() + ") làm việc trở lại?";
+                    ? "Cho " + n.getHoTen() + " (" + n.getMaNV() + ") nghỉ việc?\nNhân viên sẽ không đăng nhập được nữa nhưng dữ liệu cũ vẫn được giữ."
+                    : "Cho " + n.getHoTen() + " (" + n.getMaNV() + ") làm việc trở lại?";
             if (!Msg.confirm(this, hoi)) return;
-            Async.run(this, () -> { nsService.datTrangThaiLamViec(n.maNV(), !nghi); return null; }, x -> {
+            Async.run(this, () -> { nsService.datTrangThaiLamViec(n.getMaNV(), !nghi); return null; }, x -> {
                 reload();
                 taiKhoanTab.reload();
             });
         }
 
         private void form(NhanVien old) {
-            JTextField ten = new JTextField(old == null ? "" : old.hoTen(), 26);
-            JTextField sdt = new JTextField(old == null ? "" : old.soDienThoai(), 26);
-            JTextField email = new JTextField(old == null ? "" : old.email(), 26);
-            JTextField diaChi = new JTextField(old == null ? "" : old.diaChi(), 26);
+            JTextField ten = new JTextField(old == null ? "" : old.getHoTen(), 26);
+            JTextField sdt = new JTextField(old == null ? "" : old.getSoDienThoai(), 26);
+            JTextField email = new JTextField(old == null ? "" : old.getEmail(), 26);
+            JTextField diaChi = new JTextField(old == null ? "" : old.getDiaChi(), 26);
             JComboBox<Role> vaiTro = new JComboBox<>(Role.values());
             vaiTro.setRenderer(new javax.swing.DefaultListCellRenderer() {
                 @Override public java.awt.Component getListCellRendererComponent(javax.swing.JList<?> l, Object v, int i, boolean s, boolean f) {
                     return super.getListCellRendererComponent(l, v instanceof Role r ? r.displayName() : v, i, s, f);
                 }
             });
-            if (old != null && old.vaiTro() != null) vaiTro.setSelectedItem(old.vaiTro());
-            JTextField heSo = new JTextField(old == null ? "2,0" : String.format(Locale.ROOT, "%.2f", old.heSoLuong()).replace('.', ','), 26);
-            JTextField luong = new JTextField(old == null ? "" : String.valueOf(old.luongCoBan()), 26);
+            if (old != null && old.getRole() != null) vaiTro.setSelectedItem(old.getRole());
+            JTextField heSo = new JTextField(old == null ? "2,0" : String.format(Locale.ROOT, "%.2f", old.getHeSoLuong()).replace('.', ','), 26);
+            JTextField luong = new JTextField(old == null ? "" : String.valueOf(old.getLuongCoBan()), 26);
 
             FormDialog.Form f = new FormDialog.Form()
                     .add("Họ tên *", ten).add("Số điện thoại *", sdt).add("Email *", email).add("Địa chỉ *", diaChi)
@@ -327,7 +327,7 @@ public final class DichVuNhanSuPanel extends BasePanel {
             if (old == null) f.note("Sau khi thêm, vào tab <b>Tài khoản</b> để cấp tên đăng nhập và mật khẩu cho nhân viên.");
             Double[] heSoHolder = new Double[1];
             Long[] luongHolder = new Long[1];
-            boolean ok = FormDialog.show(this, old == null ? "Thêm nhân viên" : "Sửa nhân viên " + old.maNV(), f, () -> {
+            boolean ok = FormDialog.show(this, old == null ? "Thêm nhân viên" : "Sửa nhân viên " + old.getMaNV(), f, () -> {
                 heSoHolder[0] = parseDouble(heSo.getText());
                 if (heSoHolder[0] == null) return "Hệ số lương phải là số (ví dụ 2,5).";
                 luongHolder[0] = parseMoney(luong.getText());
@@ -339,9 +339,9 @@ public final class DichVuNhanSuPanel extends BasePanel {
             Async.run(this, () -> {
                 if (old == null) return "Đã thêm nhân viên " + nsService.themNhanVien(ten.getText(), sdt.getText(), email.getText(),
                         diaChi.getText(), r, heSoHolder[0], luongHolder[0]) + ".";
-                nsService.suaNhanVien(old.maNV(), ten.getText(), sdt.getText(), email.getText(), diaChi.getText(), r,
+                nsService.suaNhanVien(old.getMaNV(), ten.getText(), sdt.getText(), email.getText(), diaChi.getText(), r,
                         heSoHolder[0], luongHolder[0]);
-                return "Đã cập nhật nhân viên " + old.maNV() + ".";
+                return "Đã cập nhật nhân viên " + old.getMaNV() + ".";
             }, msg -> { Msg.info(this, msg); reload(); taiKhoanTab.reload(); });
         }
     }
@@ -397,7 +397,7 @@ public final class DichVuNhanSuPanel extends BasePanel {
                 JComboBox<NhanVien> nv = new JComboBox<>(new DefaultComboBoxModel<>(list.toArray(new NhanVien[0])));
                 nv.setRenderer(new javax.swing.DefaultListCellRenderer() {
                     @Override public java.awt.Component getListCellRendererComponent(javax.swing.JList<?> l, Object v, int i, boolean s, boolean f) {
-                        String t = v instanceof NhanVien n ? n.maNV() + " · " + n.hoTen() + " · " + (n.vaiTro() == null ? "?" : n.vaiTro().displayName()) : "";
+                        String t = v instanceof NhanVien n ? n.getMaNV() + " · " + n.getHoTen() + " · " + (n.getRole() == null ? "?" : n.getRole().displayName()) : "";
                         return super.getListCellRendererComponent(l, t, i, s, f);
                     }
                 });
@@ -410,9 +410,9 @@ public final class DichVuNhanSuPanel extends BasePanel {
                 NhanVien chon = (NhanVien) nv.getSelectedItem();
                 String m1 = new String(p1.getPassword()), m2 = new String(p2.getPassword());
                 Async.run(this, () -> {
-                    nsService.capTaiKhoan(chon.maNV(), user.getText(), m1, m2);
+                    nsService.capTaiKhoan(chon.getMaNV(), user.getText(), m1, m2);
                     return null;
-                }, x -> { Msg.info(this, "Đã cấp tài khoản cho " + chon.hoTen() + "."); reload(); });
+                }, x -> { Msg.info(this, "Đã cấp tài khoản cho " + chon.getHoTen() + "."); reload(); });
             });
         }
 

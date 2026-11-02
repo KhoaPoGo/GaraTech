@@ -1,5 +1,7 @@
 package entity;
 
+import enums.Role;
+
 public class NhanVien {
 	private String maNV;
 	private String hoTen;
@@ -9,6 +11,7 @@ public class NhanVien {
 	private String vaiTro;
 	private double heSoLuong;
 	private int luongCoBan;
+	private boolean dangLam = true;
 	
 	public NhanVien() {
 		super();
@@ -25,6 +28,12 @@ public class NhanVien {
 		this.vaiTro = vaiTro;
 		this.heSoLuong = heSoLuong;
 		this.luongCoBan = luongCoBan;
+	}
+
+	public NhanVien(String maNV, String hoTen, String soDienThoai, String email, String diaChi, String vaiTro,
+			double heSoLuong, int luongCoBan, boolean dangLam) {
+		this(maNV, hoTen, soDienThoai, email, diaChi, vaiTro, heSoLuong, luongCoBan);
+		this.dangLam = dangLam;
 	}
 
 	public String getMaNV() {
@@ -91,10 +100,29 @@ public class NhanVien {
 		this.luongCoBan = luongCoBan;
 	}
 
+	/** Cột dangLam trong bảng NhanVien: true = đang làm, false = đã nghỉ việc. */
+	public boolean isDangLam() {
+		return dangLam;
+	}
+
+	public void setDangLam(boolean dangLam) {
+		this.dangLam = dangLam;
+	}
+
+	/** Vai trò dạng enum (từ chuỗi vaiTro đọc ở DB); null nếu chuỗi không hợp lệ. */
+	public Role getRole() {
+		return Role.fromDb(vaiTro);
+	}
+
+	/** Lương theo hệ số = lương cơ bản × hệ số (chỉ để hiển thị tham khảo). */
+	public long luongTheoHeSo() {
+		return Math.round(luongCoBan * heSoLuong);
+	}
+
 	@Override
 	public String toString() {
 		return "NhanVien [maNV=" + maNV + ", hoTen=" + hoTen + ", soDienThoai=" + soDienThoai + ", email=" + email
 				+ ", diaChi=" + diaChi + ", vaiTro=" + vaiTro + ", heSoLuong=" + heSoLuong + ", luongCoBan="
-				+ luongCoBan + "]";
+				+ luongCoBan + ", dangLam=" + dangLam + "]";
 	}
 }
