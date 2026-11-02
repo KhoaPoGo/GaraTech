@@ -5,6 +5,8 @@ import gui.component.BasePanel;
 import gui.panel.DashBoardPanel;
 import gui.panel.PlaceholderPanel;
 
+import gui.label.CongViecKTVLabel;
+import gui.label.YeuCauPhuTungLabel;
 
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -39,11 +41,12 @@ public enum Screen {
 
     // ---- Kỹ thuật viên (SV4) ----
     CONG_VIEC_KTV("Công việc của tôi", "SV4", EnumSet.of(KY_THUAT_VIEN),
-            "CHỈ thấy phiếu được phân công cho mình; tick hạng mục đã làm; cập nhật tiến độ & kết quả; xong thì chuyển sang Chờ kiểm tra.",
-            null),
+            "Chỉ Hoàng thấy phiếu được phân công cho mình; tick hạng mục đã làm; cập nhật tiến độ & kết quả; xong thì chuyển sang Chờ kiểm tra.",
+            CongViecKTVLabel::new),
+    
     YEU_CAU_PHU_TUNG("Yêu cầu phụ tùng", "SV4", EnumSet.of(KY_THUAT_VIEN),
-            "Gửi yêu cầu xuất phụ tùng cho kho (trạng thái Chờ xác nhận); xem tình trạng yêu cầu đã gửi.",
-            null),
+            "Hoang Gửi yêu cầu xuất phụ tùng cho kho (trạng thái Chờ xác nhận); xem tình trạng yêu cầu đã gửi.",
+            YeuCauPhuTungLabel::new),
 
     // ---- Tiếp nhận (SV2) ----
     KHACH_HANG_XE("Khách hàng & xe", "SV2", EnumSet.of(QUAN_LY, TIEP_NHAN, KY_THUAT_VIEN),
