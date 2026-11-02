@@ -7,8 +7,9 @@ import gui.panel.DashBoardPanel;
 import gui.panel.DichVuNhanSuPanel;
 import gui.panel.DieuPhoiPanel;
 import gui.panel.KiemTraChatLuongPanel;
+import gui.panel.KhachHangXePanel;
 import gui.panel.PlaceholderPanel;
-
+import gui.panel.tiepnhan.TiepNhanXePanel;
 
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -52,10 +53,10 @@ public enum Screen {
     // ---- Tiếp nhận (SV2) ----
     KHACH_HANG_XE("Khách hàng & xe", "SV2", EnumSet.of(QUAN_LY, TIEP_NHAN, KY_THUAT_VIEN),
             "Danh sách + chi tiết + lịch sử sửa chữa; popup thêm khách; SĐT 10 số bắt đầu 0; chặn trùng biển số; không xóa nếu đã có chứng từ. KTV chỉ xem.",
-            null),
+            KhachHangXePanel::new),
     TIEP_NHAN_XE("Tiếp nhận xe", "SV2", EnumSet.of(TIEP_NHAN),
             "Chọn khách/xe, số km, mức nhiên liệu, ghi vết xước (bắt buộc); hẹn trả ≥ thời gian tiếp nhận; mã PTN-YYYYMMDD-STT.",
-            null),
+            TiepNhanXePanel::new),
     PHIEU_SUA_CHUA("Lập phiếu sửa chữa", "SV2", EnumSet.of(TIEP_NHAN),
             "Bảng hạng mục (dịch vụ HOẶC phụ tùng); báo giá; Chờ duyệt / Đã xác nhận / Từ chối; checklist phê duyệt; hủy phiếu có lý do.",
             null),
