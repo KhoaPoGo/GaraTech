@@ -19,11 +19,14 @@ public final class Validator {
     /** Tiền, số lượng, số km: >= 0. */
     public static boolean nonNegative(double v) { return v >= 0; }
 
-    /** heSoLuong phải nằm trong [1.84, 6.5]. */
-    public static boolean heSoLuong(double v) { return v >= 1.84 && v <= 6.5; }
+    /**
+     * heSoLuong phải nằm trong [1.0, 5.0] (CK_NV_heso trong sql/01_TaoBang.sql).
+     * Lưu ý: báo cáo ghi [1.84, 6.5], nhóm cần chốt một khoảng rồi sửa đồng thời SQL và hàm này.
+     */
+    public static boolean heSoLuong(double v) { return v >= 1.0 && v <= 5.0; }
 
-    /** Biển số xe VN (đơn giản): 2 số + 1-2 chữ + (dấu - tùy chọn) + 4-5 số, ví dụ 51H-12345, 60A-24680. */
+    /** Biển số xe VN: 2 số + 1-2 chữ (+ 1 số cho xe máy) + dấu - tùy chọn + 4 số, 5 số hoặc dạng 123.45. Ví dụ 51A-123.45, 51H-12345, 60A-24680. */
     public static boolean bienSo(String s) {
-        return s != null && s.trim().toUpperCase().matches("^\\d{2}[A-Z]{1,2}\\d?-?\\d{4,5}(\\.\\d{2})?$");
+        return s != null && s.trim().toUpperCase().matches("^\\d{2}[A-Z]{1,2}\\d?-?(\\d{3}\\.\\d{2}|\\d{4,5})$");
     }
 }
