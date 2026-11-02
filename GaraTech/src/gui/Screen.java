@@ -5,7 +5,7 @@ import gui.component.BasePanel;
 import gui.panel.DashBoardPanel;
 import gui.panel.KhachHangXePanel;
 import gui.panel.PlaceholderPanel;
-
+import gui.panel.tiepnhan.TiepNhanXePanel;
 
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -52,7 +52,7 @@ public enum Screen {
             KhachHangXePanel::new),
     TIEP_NHAN_XE("Tiếp nhận xe", "SV2", EnumSet.of(TIEP_NHAN),
             "Chọn khách/xe, số km, mức nhiên liệu, ghi vết xước (bắt buộc); hẹn trả ≥ thời gian tiếp nhận; mã PTN-YYYYMMDD-STT.",
-            null),
+            TiepNhanXePanel::new),
     PHIEU_SUA_CHUA("Lập phiếu sửa chữa", "SV2", EnumSet.of(TIEP_NHAN),
             "Bảng hạng mục (dịch vụ HOẶC phụ tùng); báo giá; Chờ duyệt / Đã xác nhận / Từ chối; checklist phê duyệt; hủy phiếu có lý do.",
             null),
