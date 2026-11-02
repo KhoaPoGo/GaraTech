@@ -6,21 +6,22 @@ import java.awt.Component;
 /**
  * Hộp thoại thông báo thống nhất ("hiển thị thông báo rõ ràng khi thành công / lỗi" và
  * "bước xác nhận cho thao tác quan trọng" trong yêu cầu phi chức năng).
+ * Luôn căn giữa màn hình theo yêu cầu nghiệp vụ.
  */
 public final class Msg {
     private Msg() {}
 
     public static void info(Component parent, String text) {
-        JOptionPane.showMessageDialog(parent, text, "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(null, text, "Thông báo", JOptionPane.INFORMATION_MESSAGE);
     }
 
     public static void error(Component parent, String text) {
-        JOptionPane.showMessageDialog(parent, text, "Có lỗi", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(null, text, "Có lỗi", JOptionPane.ERROR_MESSAGE);
     }
 
     /** Hỏi xác nhận trước khi lập hóa đơn, xuất kho, hủy phiếu, đổi dữ liệu quan trọng... */
     public static boolean confirm(Component parent, String text) {
-        return JOptionPane.showConfirmDialog(parent, text, "Xác nhận",
+        return JOptionPane.showConfirmDialog(null, text, "Xác nhận",
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION;
     }
 }
