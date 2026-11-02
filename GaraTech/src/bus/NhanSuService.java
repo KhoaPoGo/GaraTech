@@ -35,10 +35,10 @@ public final class NhanSuService {
                                double heSo, long luongCoBan) throws SQLException {
         NhanVien n = kiemTra(null, hoTen, sdt, email, diaChi, vaiTro, heSo, luongCoBan, true);
         return ConnectDB.inTransaction(c -> {
-            NhanVien moi = new NhanVien(IdGenerator.next(c, IdGenerator.Kind.NHAN_VIEN), n.hoTen(), n.soDienThoai(),
-                    n.email(), n.diaChi(), n.vaiTro(), n.heSoLuong(), n.luongCoBan(), true);
+            NhanVien moi = new NhanVien(IdGenerator.next(c, IdGenerator.Kind.NHAN_VIEN), n.getHoTen(), n.getSoDienThoai(),
+                    n.getEmail(), n.getDiaChi(), n.getVaiTro(), n.getHeSoLuong(), n.getLuongCoBan(), true);
             nvDao.insert(c, moi);
-            return moi.maNV();
+            return moi.getMaNV();
         });
     }
 
@@ -46,11 +46,11 @@ public final class NhanSuService {
                             double heSo, long luongCoBan) throws SQLException {
         NhanVien cu = nvDao.findById(maNV);
         if (cu == null) throw new BusinessException("Nhân viên " + maNV + " không còn tồn tại.");
-        NhanVien n = kiemTra(maNV, hoTen, sdt, email, diaChi, vaiTro, heSo, luongCoBan, cu.dangLam());
-        if (cu.vaiTro() != vaiTro) {
+        NhanVien n = kiemTra(maNV, hoTen, sdt, email, diaChi, vaiTro, heSo, luongCoBan, cu.isDangLam());
+        if (cu.getRole() != vaiTro) {
             if (maNV.equals(Session.maNV()))
                 throw new BusinessException("Bạn không thể tự đổi vai trò của chính mình.");
-            if (cu.vaiTro() == Role.KY_THUAT_VIEN) chanNeuConViec(maNV, "đổi vai trò");
+            if (cu.getRole() == Role.KY_THUAT_VIEN) chanNeuConViec(maNV, "đổi vai trò");
         }
         nvDao.update(n);
     }
@@ -60,7 +60,7 @@ public final class NhanSuService {
         if (!dangLam) {
             if (maNV.equals(Session.maNV())) throw new BusinessException("Bạn không thể tự cho mình nghỉ việc.");
             NhanVien cu = nvDao.findById(maNV);
-            if (cu != null && cu.vaiTro() == Role.KY_THUAT_VIEN) chanNeuConViec(maNV, "cho nghỉ việc");
+            if (cu != null && cu.getRole() == Role.KY_THUAT_VIEN) chanNeuConViec(maNV, "cho nghỉ việc");
         }
         if (nvDao.setDangLam(maNV, dangLam) == 0) throw new BusinessException("Nhân viên " + maNV + " không còn tồn tại.");
     }
@@ -90,7 +90,7 @@ public final class NhanSuService {
         if (luong > Integer.MAX_VALUE) throw new BusinessException("Lương cơ bản quá lớn.");
         String trung = nvDao.findDuplicate(sdt, email, maNV);
         if (trung != null) throw new BusinessException(trung + " đã được nhân viên khác sử dụng.");
-        return new NhanVien(maNV, hoTen, sdt, email, diaChi, vaiTro, Math.round(heSo * 100) / 100.0, luong, dangLam);
+        return new NhanVien(maNV, hoTen, sdt, email, diaChi, vaiTro.dbValue(), Math.round(heSo * 100) / 100.0, (int) luong, dangLam);
     }
 
     // ---------------- Tài khoản ----------------
