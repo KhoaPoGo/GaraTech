@@ -9,6 +9,7 @@ import gui.panel.DieuPhoiPanel;
 import gui.panel.KiemTraChatLuongPanel;
 import gui.panel.KhachHangXePanel;
 import gui.panel.PlaceholderPanel;
+import gui.panel.phieusuachua.PhieuSuaChuaPanel;
 import gui.panel.tiepnhan.TiepNhanXePanel;
 
 import java.util.Arrays;
@@ -59,7 +60,7 @@ public enum Screen {
             TiepNhanXePanel::new),
     PHIEU_SUA_CHUA("Lập phiếu sửa chữa", "SV2", EnumSet.of(TIEP_NHAN),
             "Bảng hạng mục (dịch vụ HOẶC phụ tùng); báo giá; Chờ duyệt / Đã xác nhận / Từ chối; checklist phê duyệt; hủy phiếu có lý do.",
-            null),
+            PhieuSuaChuaPanel::new),
     HOA_DON("Hóa đơn", "SV4", EnumSet.of(TIEP_NHAN),
             "Chỉ lập khi phiếu Hoàn thành; tiền công + phụ tùng − giảm giá + VAT 10%; lịch sử thanh toán nhiều lần; in hóa đơn.",
             null),

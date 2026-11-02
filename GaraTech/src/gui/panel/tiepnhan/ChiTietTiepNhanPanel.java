@@ -166,6 +166,7 @@ public final class ChiTietTiepNhanPanel extends JPanel {
 
         // Lập phiếu sửa chữa: Chuyển sang màn hình PhieuSuaChua
         btnCreatePsc.addActionListener(e -> {
+            if (currentTicket != null) Navigator.setPayload(currentTicket);
             Navigator.go(Screen.PHIEU_SUA_CHUA);
         });
 
