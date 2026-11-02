@@ -1,10 +1,7 @@
 package dao;
 
 import connectDB.ConnectDB;
-import entity.KhachHang;
-import entity.NhanVien;
 import entity.PhieuTiepNhan;
-import entity.Xe;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -16,9 +13,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Data Access Object cho PhieuTiepNhan (bảng PhieuTiepNhan trong SQL Server).
- */
 public final class PhieuTiepNhanDao {
 
     public record PhieuTiepNhanRow(
@@ -37,13 +31,9 @@ public final class PhieuTiepNhanDao {
             String maNV,
             String tenNhanVien,
             String trangThai
-    ) {}
+    ) {
+    }
 
-    private PhieuTiepNhanDao() {}
-
-    /**
-     * Thêm mới một phiếu tiếp nhận và cập nhật số KM hiện tại của xe trong cùng transaction.
-     */
     public static boolean insert(PhieuTiepNhan ptn) throws SQLException {
         String sqlPtn = """
                 INSERT INTO PhieuTiepNhan(maPhieuTN, bienSo, maKH, maNV, thoiGianTiepNhan, thoiGianHenTra,
@@ -126,7 +116,7 @@ public final class PhieuTiepNhanDao {
     }
 
     /**
-     * Tra cứu danh sách phiếu tiếp nhận có bộ lọc ngày, từ khóa và trạng thái.
+     * Tìm kiếm danh sách phiếu tiếp nhận có bộ lọc ngày, từ khóa, trạng thái.
      */
     public static List<PhieuTiepNhanRow> search(LocalDate fromDate, LocalDate toDate, String keyword, String trangThai) throws SQLException {
         List<PhieuTiepNhanRow> list = new ArrayList<>();
@@ -142,7 +132,7 @@ public final class PhieuTiepNhanDao {
                 JOIN KhachHang kh ON ptn.maKH = kh.maKH
                 JOIN Xe x ON ptn.bienSo = x.bienSo
                 JOIN NhanVien nv ON ptn.maNV = nv.maNV
-                WHERE 1=1
+                WHERE 1 = 1
                 """);
 
         List<Object> params = new ArrayList<>();
@@ -155,9 +145,9 @@ public final class PhieuTiepNhanDao {
             sql.append(" AND ptn.thoiGianTiepNhan <= ?");
             params.add(Timestamp.valueOf(toDate.atTime(23, 59, 59)));
         }
-        if (trangThai != null && !trangThai.isBlank() && !trangThai.equalsIgnoreCase("ALL") && !trangThai.equalsIgnoreCase("Tất cả")) {
+        if (trangThai != null && !trangThai.isBlank() && !trangThai.equalsIgnoreCase("Tất cả")) {
             sql.append(" AND ptn.trangThai = ?");
-            params.add(trangThai);
+            params.add(trangThai.trim());
         }
         if (keyword != null && !keyword.isBlank()) {
             String kw = "%" + keyword.trim() + "%";
@@ -185,8 +175,52 @@ public final class PhieuTiepNhanDao {
     }
 
     /**
-     * Cập nhật trạng thái phiếu tiếp nhận (ví dụ: chuyển sang 'Đang kiểm tra' hoặc 'Đã hủy').
+     * Tìm danh sách phiếu tiếp nhận hợp lệ để lập phiếu sửa chữa
+     * (trạng thái Đã xác nhận và chưa được gắn vào phiếu sửa chữa chưa hủy nào).
      */
+    public static List<PhieuTiepNhanRow> findEligibleForRepair(String keyword) throws SQLException {
+        List<PhieuTiepNhanRow> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("""
+                SELECT ptn.maPhieuTN, ptn.bienSo, ptn.maKH, ptn.maNV,
+                       ptn.thoiGianTiepNhan, ptn.thoiGianHenTra,
+                       ptn.tinhTrangBanDau, ptn.yeuCauKhachHang,
+                       ptn.mucNhienLieu, ptn.soKmTiepNhan, ptn.trangThai,
+                       kh.hoTen AS tenKH, kh.soDienThoai AS sdtKH,
+                       x.hangXe, x.model, x.namSanXuat, x.mauXe,
+                       nv.hoTen AS tenNV
+                FROM PhieuTiepNhan ptn
+                JOIN KhachHang kh ON ptn.maKH = kh.maKH
+                JOIN Xe x ON ptn.bienSo = x.bienSo
+                JOIN NhanVien nv ON ptn.maNV = nv.maNV
+                WHERE ptn.trangThai IN (N'Đã xác nhận', N'Chờ khách hàng xác nhận', N'Chờ khách xác nhận')
+                  AND ptn.maPhieuTN NOT IN (SELECT maPhieuTN FROM PhieuSuaChua WHERE trangThai <> N'Đã hủy')
+                """);
+
+        List<Object> params = new ArrayList<>();
+        if (keyword != null && !keyword.isBlank()) {
+            String kw = "%" + keyword.trim() + "%";
+            sql.append(" AND (ptn.maPhieuTN LIKE ? OR ptn.bienSo LIKE ? OR kh.hoTen LIKE ? OR kh.soDienThoai LIKE ?)");
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+        sql.append(" ORDER BY ptn.thoiGianTiepNhan DESC");
+
+        try (Connection c = ConnectDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        }
+        return list;
+    }
+
     public static boolean updateTrangThai(String maPhieuTN, String trangThaiMoi) throws SQLException {
         String sql = "UPDATE PhieuTiepNhan SET trangThai = ? WHERE maPhieuTN = ?";
         try (Connection c = ConnectDB.getConnection();

@@ -7,6 +7,8 @@ public class PhuTung {
 	private String donViTinh;
 	private Double donGiaNhap;
 	private Double donGiaBan;
+	private int soLuongTon;
+	private int tonKhoToiThieu;
 	private String viTriLuuKho;
 	private int thoiGianBaoHanh;
 	
@@ -15,7 +17,7 @@ public class PhuTung {
 	}
 
 	public PhuTung(String maPhuTung, String tenPhuTung, String loaiPhuTung, String donViTinh, Double donGiaNhap,
-			Double donGiaBan, String viTriLuuKho, int thoiGianBaoHanh) {
+			Double donGiaBan, int soLuongTon, int tonKhoToiThieu, String viTriLuuKho, int thoiGianBaoHanh) {
 		super();
 		this.maPhuTung = maPhuTung;
 		this.tenPhuTung = tenPhuTung;
@@ -23,8 +25,15 @@ public class PhuTung {
 		this.donViTinh = donViTinh;
 		this.donGiaNhap = donGiaNhap;
 		this.donGiaBan = donGiaBan;
+		this.soLuongTon = soLuongTon;
+		this.tonKhoToiThieu = tonKhoToiThieu;
 		this.viTriLuuKho = viTriLuuKho;
 		this.thoiGianBaoHanh = thoiGianBaoHanh;
+	}
+
+	public PhuTung(String maPhuTung, String tenPhuTung, String loaiPhuTung, String donViTinh, Double donGiaNhap,
+			Double donGiaBan, String viTriLuuKho, int thoiGianBaoHanh) {
+		this(maPhuTung, tenPhuTung, loaiPhuTung, donViTinh, donGiaNhap, donGiaBan, 0, 0, viTriLuuKho, thoiGianBaoHanh);
 	}
 
 	public String getMaPhuTung() {
@@ -75,6 +84,22 @@ public class PhuTung {
 		this.donGiaBan = donGiaBan;
 	}
 
+	public int getSoLuongTon() {
+		return soLuongTon;
+	}
+
+	public void setSoLuongTon(int soLuongTon) {
+		this.soLuongTon = soLuongTon;
+	}
+
+	public int getTonKhoToiThieu() {
+		return tonKhoToiThieu;
+	}
+
+	public void setTonKhoToiThieu(int tonKhoToiThieu) {
+		this.tonKhoToiThieu = tonKhoToiThieu;
+	}
+
 	public String getViTriLuuKho() {
 		return viTriLuuKho;
 	}
@@ -91,11 +116,11 @@ public class PhuTung {
 		this.thoiGianBaoHanh = thoiGianBaoHanh;
 	}
 	
-	public void capNhatTonKho(String capNhatMoi) {
-		
+	public void capNhatTonKho(int soLuongThayDoi) {
+		this.soLuongTon += soLuongThayDoi;
 	}
 	
-	public void kiemTraCanhBaoMoi() {
-		
+	public boolean kiemTraCanhBaoMoi() {
+		return this.soLuongTon <= this.tonKhoToiThieu;
 	}
 }
