@@ -1,5 +1,0 @@
-# Copy file này thành db.local.properties rồi sửa theo máy của bạn
-db.url=jdbc:sqlserver://localhost:1433;databaseName=GaraTech;encrypt=false;trustServerCertificate=true;loginTimeout=3
-db.user=sa
-db.password=sapassword
-app.demoMode=true
