@@ -14,6 +14,7 @@ import gui.panel.PlaceholderPanel;
 import gui.panel.PhuTungTonKhoPanel;
 import gui.panel.NhapKhoPanel;
 import gui.panel.XuatKhoPanel;
+import gui.panel.tiepnhan.DashboardTiepNhanPanel;
 import gui.panel.tiepnhan.TiepNhanXePanel;
 
 import java.util.Arrays;
@@ -52,6 +53,9 @@ public enum Screen {
             YeuCauPhuTungLabel::new),
 
     // ---- Tiếp nhận (SV2) ----
+    DASHBOARD_TIEP_NHAN("Bảng điều hành", "SV2", EnumSet.of(TIEP_NHAN),
+            "Giám sát xe vào xưởng, 4 chỉ số KPI ca trực, thanh tiến độ xưởng và hàng đợi giao xe.",
+            DashboardTiepNhanPanel::new),
     KHACH_HANG_XE("Khách hàng & xe", "SV2", EnumSet.of(QUAN_LY, TIEP_NHAN, KY_THUAT_VIEN),
             "Danh sách + chi tiết + lịch sử sửa chữa; popup thêm khách; SĐT 10 số bắt đầu 0; chặn trùng biển số; không xóa nếu đã có chứng từ. KTV chỉ xem.",
             KhachHangXePanel::new),
