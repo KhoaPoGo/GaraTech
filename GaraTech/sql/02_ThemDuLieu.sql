@@ -96,7 +96,7 @@ INSERT INTO ChiTietLinhKien(maPhieu, maPhuTung, soLuong, donGiaXuat, ghiChu) VAL
  ('PSC-20261108-001', 'PT0001', 3, 180000, N'Dầu nhớt 5W-30'),
  ('PSC-20261108-001', 'PT0002', 1, 100000, N'Lọc dầu động cơ');
 
--- Phiếu 2: DANG_SUA (Đang thực hiện sửa chữa hôm nay)
+-- Phiếu 2: HOAN_TAT (Đã hoàn tất kỹ thuật, chờ tiếp nhận viên lập hóa đơn)
 INSERT INTO PhieuTiepNhanSuaChua (
     maPhieu, bienSo, maNVTiepNhan, maNVKyThuat, ngayGioTiepNhan,
     yeuCauBanDau, tinhTrangXe, soKmTiepNhan, mucNhienLieu,
@@ -106,9 +106,9 @@ INSERT INTO PhieuTiepNhanSuaChua (
     N'Bảo dưỡng định kỳ 10.000 km, xe tăng tốc hơi rung.',
     N'Hiện trạng nguyên vẹn, nội thất sạch sẽ.',
     28000, 0.75,
-    '2026-11-10 16:00:00', '2026-11-10 09:30:00', NULL,
-    N'Đang tiến hành tháo kiểm tra cụm bugi và vệ sinh bướm ga.',
-    'DANG_SUA'
+    '2026-11-10 16:00:00', '2026-11-10 09:30:00', '2026-11-10 16:00:00',
+    N'Đã hoàn tất bảo dưỡng định kỳ 10.000 km, kiểm tra bugi và vệ sinh bướm ga.',
+    'HOAN_TAT'
 );
 
 INSERT INTO ChiTietDichVu(maPhieu, maDichVu, soLuong, donGiaThucHien, ghiChu) VALUES
