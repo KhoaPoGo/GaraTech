@@ -34,58 +34,58 @@ import static enums.Role.TIEP_NHAN;
  */
 public enum Screen {
     // ---- Quản lý (SV1) ----
-    DASHBOARD("Tổng quan", "SV1", EnumSet.of(QUAN_LY),
+    DASHBOARD("Tổng quan hệ thống", "SV1", EnumSet.of(QUAN_LY),
             "Số xe tiếp nhận / đang sửa / hoàn thành kỹ thuật / doanh thu ngày; biểu đồ 7 ngày; cảnh báo tồn kho; phiếu đang hoạt động.",
             DashBoardPanel::new),
     DIEU_PHOI("Điều phối & tiến độ", "SV1", EnumSet.of(QUAN_LY),
             "Kanban 5 cột theo trạng thái phiếu; chọn kỹ thuật viên (chuyên môn, rảnh/bận); hạn hoàn thành; khung kiểm soát tiến độ.",
             DieuPhoiPanel::new),
-    KIEM_TRA_CL("Kiểm tra chất lượng", "SV1", EnumSet.of(QUAN_LY),
+    KIEM_TRA_CL("Kiểm tra chất lượng (KCS)", "SV1", EnumSet.of(QUAN_LY),
             "2 cột đối chiếu (KTV báo / quản lý kiểm); checklist bắt buộc (đã chạy thử, không rò rỉ nhớt, vệ sinh xe) mới cho chuyển Hoàn thành.",
             KiemTraChatLuongPanel::new),
 
     // ---- Kỹ thuật viên (SV4) ----
-    CONG_VIEC_KTV("Công việc của tôi", "SV4", EnumSet.of(KY_THUAT_VIEN),
-            "Chỉ Hoàng thấy phiếu được phân công cho mình; tick hạng mục đã làm; cập nhật tiến độ & kết quả; xong thì chuyển sang Chờ kiểm tra.",
+    CONG_VIEC_KTV("Thực hiện sửa chữa", "SV4", EnumSet.of(KY_THUAT_VIEN),
+            "Chỉ KTV thấy phiếu được phân công cho mình; tick hạng mục đã làm; cập nhật tiến độ & kết quả; xong thì chuyển sang Chờ kiểm tra.",
             CongViecKTVPanel::new),
     
-    YEU_CAU_PHU_TUNG("Yêu cầu phụ tùng", "SV4", EnumSet.of(KY_THUAT_VIEN),
-            "Hoang Gửi yêu cầu xuất phụ tùng cho kho (trạng thái Chờ xác nhận); xem tình trạng yêu cầu đã gửi.",
+    YEU_CAU_PHU_TUNG("Yêu cầu cấp phụ tùng", "SV4", EnumSet.of(KY_THUAT_VIEN),
+            "KTV gửi yêu cầu xuất phụ tùng cho kho (trạng thái Chờ xác nhận); xem tình trạng yêu cầu đã gửi.",
             YeuCauPhuTungPanel::new),
 
     // ---- Tiếp nhận (SV2) ----
-    DASHBOARD_TIEP_NHAN("Bảng điều hành", "SV2", EnumSet.of(TIEP_NHAN),
+    DASHBOARD_TIEP_NHAN("Điều hành tiếp nhận", "SV2", EnumSet.of(TIEP_NHAN),
             "Giám sát xe vào xưởng, 4 chỉ số KPI ca trực, thanh tiến độ xưởng và hàng đợi giao xe.",
             DashboardTiepNhanPanel::new),
-    KHACH_HANG_XE("Khách hàng & xe", "SV2", EnumSet.of(QUAN_LY, TIEP_NHAN, KY_THUAT_VIEN),
+    KHACH_HANG_XE("Quản lý khách hàng & xe", "SV2", EnumSet.of(QUAN_LY, TIEP_NHAN, KY_THUAT_VIEN),
             "Danh sách + chi tiết + lịch sử sửa chữa; popup thêm khách; SĐT 10 số bắt đầu 0; chặn trùng biển số; không xóa nếu đã có chứng từ. KTV chỉ xem.",
             KhachHangXePanel::new),
-    TIEP_NHAN_XE("Quản lý phiếu Tiếp nhận - Sửa chữa", "SV2", EnumSet.of(TIEP_NHAN),
+    TIEP_NHAN_XE("Quản lý tiếp nhận & sửa chữa", "SV2", EnumSet.noneOf(Role.class),
             "Quản lý vòng đời phiếu Tiếp nhận - Sửa chữa thống nhất; chọn khách/xe, phân công KTV, dịch vụ đề nghị, theo dõi 4 trạng thái.",
             TiepNhanXePanel::new),
-    HOA_DON("Hóa đơn", "SV4", EnumSet.of(TIEP_NHAN),
-            "Chỉ lập khi phiếu Hoàn thành; tiền công + phụ tùng − giảm giá + VAT 10%; lịch sử thanh toán nhiều lần; in hóa đơn.",
+    HOA_DON("Lập hóa đơn & thanh toán", "SV4", EnumSet.of(TIEP_NHAN),
+            "Chỉ lập khi phiếu Hoàn thành; tiền công + phụ tùng − giảm giá + VAT 10%; lịch sử thanh toán; in hóa đơn.",
             HoaDonPanel::new),
-    BAN_GIAO("Bàn giao xe", "SV4", EnumSet.of(TIEP_NHAN),
+    BAN_GIAO("Bàn giao xe cho khách", "SV4", EnumSet.of(TIEP_NHAN),
             "Chỉ cho 'Xác nhận đã bàn giao' khi hóa đơn thanh toán đủ; tick đã trả chìa khóa và giấy tờ.",
             null),
 
     // ---- Kho (SV3) ----
-    PHU_TUNG_TON_KHO("Phụ tùng & tồn kho", "SV3", EnumSet.of(QUAN_LY, KHO, KY_THUAT_VIEN),
+    PHU_TUNG_TON_KHO("Quản lý phụ tùng & tồn kho", "SV3", EnumSet.of(QUAN_LY, KHO, KY_THUAT_VIEN),
             "Bảng phụ tùng, cột tình trạng xanh/cam/đỏ; bấm 1 món xem lịch sử nhập xuất + người thực hiện; KTV chỉ đọc.",
             PhuTungTonKhoPanel::new),
-    NHAP_KHO("Nhập kho", "SV3", EnumSet.of(KHO),
+    NHAP_KHO("Quản lý nhập kho", "SV3", EnumSet.of(KHO),
             "Chọn nhà cung cấp; số lượng × đơn giá = thành tiền, tổng lô hàng; cột Tồn trước / Tồn sau; ghi trong 1 transaction.",
             NhapKhoPanel::new),
-    XUAT_KHO("Xuất kho", "SV3", EnumSet.of(KHO),
+    XUAT_KHO("Quản lý xuất kho", "SV3", EnumSet.of(KHO),
             "Duyệt yêu cầu từ KTV; số lượng xuất > tồn thì báo đỏ và khóa nút xác nhận; gắn với phiếu sửa chữa; transaction.",
             XuatKhoPanel::new),
 
     // ---- Quản lý (SV1) ----
-    DICH_VU_NHAN_SU("Dịch vụ & nhân sự", "SV1", EnumSet.of(QUAN_LY),
+    DICH_VU_NHAN_SU("Quản lý dịch vụ & nhân sự", "SV1", EnumSet.of(QUAN_LY),
             "Tab: Dịch vụ & đơn giá / Nhân viên / Tài khoản / Bảng phân quyền; KHÓA tài khoản thay vì xóa; heSoLuong 1.0–5.0.",
             DichVuNhanSuPanel::new),
-    BAO_CAO("Báo cáo & thống kê", "SV1", EnumSet.of(QUAN_LY),
+    BAO_CAO("Báo cáo & thống kê doanh thu", "SV1", EnumSet.of(QUAN_LY),
             "Lọc từ ngày – đến ngày; thực thu vs còn chờ thu; cơ cấu dịch vụ; nhóm phụ tùng tiêu thụ nhiều.",
             BaoCaoPanel::new);
 

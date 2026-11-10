@@ -31,8 +31,8 @@ public final class SidebarPanel extends JPanel {
     public SidebarPanel(List<Screen> screens, Consumer<Screen> onSelect, Runnable onLogout) {
         setLayout(new BorderLayout());
         setBackground(Theme.NAVY);
-        setPreferredSize(new Dimension(236, 0));
-        setBorder(BorderFactory.createEmptyBorder(24, 18, 18, 18));
+        setPreferredSize(new Dimension(245, 0));
+        setBorder(BorderFactory.createEmptyBorder(24, 16, 18, 16));
         User u = Session.user();
 
         // ---- Trên: logo + vai trò ----

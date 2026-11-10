@@ -220,7 +220,7 @@ public final class ThanhToanHoaDonModalDialog extends JDialog {
         card3.add(UI.h2("Tính toán tổng tiền thanh toán & khuyến mãi"), BorderLayout.NORTH);
 
         // Bên trái: Chọn chương trình khuyến mãi (căn thẳng hàng với lề trái)
-        JPanel pLeftCalc = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 4));
+        JPanel pLeftCalc = new JPanel(new BorderLayout(0, 8));
         pLeftCalc.setOpaque(false);
 
         JPanel pPromoWrap = new JPanel(new BorderLayout(0, 6));
@@ -235,7 +235,7 @@ public final class ThanhToanHoaDonModalDialog extends JDialog {
         JLabel lblPromoDesc = UI.label("Hệ thống sẽ tự động tính toán số tiền giảm giá và trừ vào hóa đơn.", Font.ITALIC, 11, Theme.MUTED);
         pPromoWrap.add(lblPromoDesc, BorderLayout.SOUTH);
 
-        pLeftCalc.add(pPromoWrap);
+        pLeftCalc.add(pPromoWrap, BorderLayout.NORTH);
         card3.add(pLeftCalc, BorderLayout.CENTER);
 
         // Bên phải: Các dòng số liệu
