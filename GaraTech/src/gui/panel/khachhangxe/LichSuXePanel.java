@@ -60,7 +60,7 @@ public final class LichSuXePanel extends JPanel {
     private final JPanel historyVehicleCardsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
 
     // History Table
-    private final DefaultTableModel vehHistoryModel = UI.readOnlyModel("Ngày", "Mã PSC", "Nội dung kỹ thuật", "Trạng thái");
+    private final DefaultTableModel vehHistoryModel = UI.readOnlyModel("Ngày", "Mã phiếu", "Nội dung kỹ thuật", "Trạng thái");
     private final JTable vehHistoryTable = UI.table(vehHistoryModel);
 
     // Detail view inputs (readonly)
@@ -68,6 +68,10 @@ public final class LichSuXePanel extends JPanel {
     private final JTextField txtHistoryDetailDeadline = new JTextField();
     private final JTextField txtHistoryDetailNotes = new JTextField();
     private final JTextField txtHistoryDetailDocs = new JTextField();
+
+    // Action buttons
+    private final JButton btnViewPsc = UI.primaryButton("Xem phiếu tiếp nhận - sửa chữa");
+    private final JButton btnBackCust = UI.secondaryButton("Quay về hồ sơ khách");
 
     // State
     private Xe vehicleInHistory;
@@ -82,6 +86,7 @@ public final class LichSuXePanel extends JPanel {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
         buildUI();
+        initEvents();
     }
 
     private void buildUI() {
@@ -171,26 +176,11 @@ public final class LichSuXePanel extends JPanel {
         JPanel actionsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
         actionsRow.setOpaque(false);
 
-        JButton btnViewPsc = UI.primaryButton("Xem phiếu tiếp nhận - sửa chữa");
-        btnViewPsc.addActionListener(e -> Navigator.go(Screen.TIEP_NHAN_XE));
-
-        JButton btnBackCust = UI.secondaryButton("Quay về hồ sơ khách");
-        btnBackCust.addActionListener(e -> onBack.run());
-
         actionsRow.add(btnViewPsc);
         actionsRow.add(btnBackCust);
         actionsRow.setAlignmentX(LEFT_ALIGNMENT);
 
         add(actionsRow);
-
-        vehHistoryTable.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                int row = vehHistoryTable.getSelectedRow();
-                if (row >= 0 && row < currentVehicleHistoryRows.size()) {
-                    populateHistoryDetail(currentVehicleHistoryRows.get(row));
-                }
-            }
-        });
 
         attachMouseWheelRecursively(this);
     }
@@ -315,7 +305,7 @@ public final class LichSuXePanel extends JPanel {
         for (LichSuSuaChuaRow r : currentVehicleHistoryRows) {
             vehHistoryModel.addRow(new Object[]{
                     r.ngay(),
-                    r.maPhieuSC(),
+                    r.maPhieu(),
                     r.noiDung(),
                     r.trangThai()
             });
@@ -423,5 +413,42 @@ public final class LichSuXePanel extends JPanel {
 
     public KhachHang getCustomerInHistory() {
         return customerInHistory;
+    }
+
+    // =========================================================================
+    // QUY TẮC BẮT BUỘC: TOÀN BỘ SỰ KIỆN NẰM TẠI initEvents() Ở CUỐI FILE
+    // =========================================================================
+    private void initEvents() {
+        vehHistoryTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int row = vehHistoryTable.getSelectedRow();
+                if (row >= 0 && row < currentVehicleHistoryRows.size()) {
+                    populateHistoryDetail(currentVehicleHistoryRows.get(row));
+                }
+            }
+        });
+
+        vehHistoryTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    moChiTietPhieuDangChon();
+                }
+            }
+        });
+
+        btnViewPsc.addActionListener(e -> moChiTietPhieuDangChon());
+        btnBackCust.addActionListener(e -> onBack.run());
+    }
+
+    private void moChiTietPhieuDangChon() {
+        int row = vehHistoryTable.getSelectedRow();
+        if (row >= 0 && row < currentVehicleHistoryRows.size()) {
+            String maPhieu = currentVehicleHistoryRows.get(row).maPhieu();
+            if (maPhieu != null && !maPhieu.isBlank() && !maPhieu.equals("---")) {
+                Navigator.setPayload(maPhieu);
+            }
+        }
+        Navigator.go(Screen.TIEP_NHAN_XE);
     }
 }

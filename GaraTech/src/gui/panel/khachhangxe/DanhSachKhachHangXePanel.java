@@ -41,6 +41,8 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -87,7 +89,7 @@ public final class DanhSachKhachHangXePanel extends JPanel {
 
     // Repair history card
     private final JPanel filterChipsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-    private final DefaultTableModel historyModel = UI.readOnlyModel("Ngày", "Biển số", "Phiếu sửa chữa", "Nội dung", "Hóa đơn");
+    private final DefaultTableModel historyModel = UI.readOnlyModel("Ngày", "Biển số", "Mã phiếu", "Nội dung", "Hóa đơn");
     private final JTable historyTable = UI.table(historyModel);
 
     // State
@@ -457,7 +459,7 @@ public final class DanhSachKhachHangXePanel extends JPanel {
             historyModel.addRow(new Object[]{
                     r.ngay(),
                     r.bienSo(),
-                    r.maPhieuSC(),
+                    r.maPhieu(),
                     r.noiDung(),
                     r.hoaDon()
             });
@@ -473,6 +475,25 @@ public final class DanhSachKhachHangXePanel extends JPanel {
                     selectCustomer(currentList.get(row));
                     lblPagingStatus.setText(String.format("Đang chọn: %s · %d / %d khách hàng",
                             currentList.get(row).hoTen(), row + 1, currentList.size()));
+                }
+            }
+        });
+
+        historyTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int row = historyTable.getSelectedRow();
+                    if (row >= 0) {
+                        Object val = historyModel.getValueAt(row, 2);
+                        if (val != null) {
+                            String maPhieu = val.toString().trim();
+                            if (!maPhieu.isEmpty() && !maPhieu.equals("---")) {
+                                Navigator.setPayload(maPhieu);
+                                Navigator.go(Screen.TIEP_NHAN_XE);
+                            }
+                        }
+                    }
                 }
             }
         });

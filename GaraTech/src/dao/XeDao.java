@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Data Access Object cho Xe (bảng Xe trong SQL Server).
@@ -22,7 +23,7 @@ public final class XeDao {
     public record LichSuSuaChuaRow(
             String ngay,
             String bienSo,
-            String maPhieuSC,
+            String maPhieu,
             String noiDung,
             String hoaDon,
             String trangThai,
@@ -31,10 +32,14 @@ public final class XeDao {
             String ghiChuKyThuat,
             String chungTuLienQuan
     ) {
-        public LichSuSuaChuaRow(String ngay, String bienSo, String maPhieuSC, String noiDung, String hoaDon) {
-            this(ngay, bienSo, maPhieuSC, noiDung, hoaDon,
-                    "Đã bàn giao", "Nguyễn Văn Nam", ngay + " · 17:00",
-                    noiDung, (hoaDon != null && hoaDon.startsWith("HD")) ? hoaDon : "Chưa lập hóa đơn");
+        public String maPhieuSC() {
+            return maPhieu;
+        }
+
+        public LichSuSuaChuaRow(String ngay, String bienSo, String maPhieu, String noiDung, String hoaDon) {
+            this(ngay, bienSo, maPhieu, noiDung, hoaDon,
+                    "Đã hoàn tất", "Chưa phân công", ngay + " · 17:00",
+                    noiDung, (maPhieu != null ? maPhieu : "---") + " · " + (hoaDon != null && !hoaDon.isEmpty() ? hoaDon : "Chưa lập hóa đơn"));
         }
     }
 
@@ -182,53 +187,92 @@ public final class XeDao {
         DateTimeFormatter dmy = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         DateTimeFormatter dmyTime = DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm");
         String sql = """
-                SELECT ptn.thoiGianTiepNhan, ptn.bienSo, psc.maPhieuSC, ptn.yeuCauKhachHang, hd.maHoaDon,
-                       psc.trangThai, psc.ghiChuKyThuat, psc.thoiGianHoanThanh, psc.thoiGianDuKien,
-                       nv.hoTen AS tenKTV, ptn.maPhieuTN
-                FROM PhieuTiepNhan ptn
-                JOIN PhieuSuaChua psc ON psc.maPhieuTN = ptn.maPhieuTN
-                LEFT JOIN NhanVien nv ON nv.maNV = psc.maKTV
-                LEFT JOIN HoaDon hd ON hd.maPhieuSC = psc.maPhieuSC
-                WHERE ptn.bienSo = ?
-                ORDER BY ptn.thoiGianTiepNhan DESC
+                SELECT p.ngayGioTiepNhan, p.bienSo, p.maPhieu, p.yeuCauBanDau, p.tinhTrangXe,
+                       p.trangThai AS trangThaiPhieu, p.ghiChuKyThuat, p.thoiGianHenTra, p.thoiGianHoanThanh,
+                       p.soKmTiepNhan,
+                       nvkt.hoTen AS tenKTV,
+                       hd.maHoaDon, hd.trangThai AS trangThaiHD
+                FROM PhieuTiepNhanSuaChua p
+                LEFT JOIN NhanVien nvkt ON p.maNVKyThuat = nvkt.maNV
+                LEFT JOIN HoaDon hd ON hd.maPhieu = p.maPhieu
+                WHERE p.bienSo = ?
+                ORDER BY p.ngayGioTiepNhan DESC
                 """;
         try (Connection c = ConnectDB.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, bienSo.trim().toUpperCase());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    Timestamp ts = rs.getTimestamp("thoiGianTiepNhan");
+                    Timestamp ts = rs.getTimestamp("ngayGioTiepNhan");
                     String ngayStr = ts != null ? ts.toLocalDateTime().format(dmy) : "";
                     String bs = rs.getString("bienSo");
-                    String psc = rs.getString("maPhieuSC");
-                    String yc = rs.getString("yeuCauKhachHang");
-                    String hd = rs.getString("maHoaDon");
-                    String tt = rs.getString("trangThai");
+                    String maPhieu = rs.getString("maPhieu");
+                    String yc = rs.getString("yeuCauBanDau");
+                    String tinhTrang = rs.getString("tinhTrangXe");
+                    String ttPhieu = rs.getString("trangThaiPhieu");
                     String ghiChu = rs.getString("ghiChuKyThuat");
-                    Timestamp tsDuKien = rs.getTimestamp("thoiGianDuKien");
+                    Timestamp tsHenTra = rs.getTimestamp("thoiGianHenTra");
                     Timestamp tsHoanThanh = rs.getTimestamp("thoiGianHoanThanh");
-                    String hanHT = tsDuKien != null ? tsDuKien.toLocalDateTime().format(dmyTime)
-                            : (tsHoanThanh != null ? tsHoanThanh.toLocalDateTime().format(dmyTime) : ngayStr + " · 17:00");
-                    String ktv = rs.getString("tenKTV");
-                    String ptn = rs.getString("maPhieuTN");
-                    String docs = (ptn != null ? ptn : "---") + " · " + (hd != null ? hd : "Chưa lập hóa đơn");
+                    String tenKTV = rs.getString("tenKTV");
+                    String maHD = rs.getString("maHoaDon");
+                    String ttHD = rs.getString("trangThaiHD");
+
+                    String noiDung = (yc != null && !yc.isBlank()) ? yc : ((tinhTrang != null && !tinhTrang.isBlank()) ? tinhTrang : "Bảo dưỡng & sửa chữa");
+                    String trangThaiHienThi = formatTrangThaiPhieu(ttPhieu, ttHD);
+
+                    String hanHT;
+                    if (tsHoanThanh != null) {
+                        hanHT = tsHoanThanh.toLocalDateTime().format(dmyTime);
+                    } else if (tsHenTra != null) {
+                        hanHT = tsHenTra.toLocalDateTime().format(dmyTime);
+                    } else {
+                        hanHT = !ngayStr.isEmpty() ? ngayStr + " · 17:00" : "---";
+                    }
+
+                    String hdHienThi = (maHD != null && !maHD.isBlank()) ? maHD : "Chưa lập hóa đơn";
+                    String docs = (maPhieu != null ? maPhieu : "---") + " · " + hdHienThi;
+
+                    String ghiChuHienThi;
+                    if (ghiChu != null && !ghiChu.isBlank()) {
+                        ghiChuHienThi = ghiChu;
+                    } else if (tinhTrang != null && !tinhTrang.isBlank()) {
+                        ghiChuHienThi = tinhTrang;
+                    } else {
+                        ghiChuHienThi = noiDung;
+                    }
 
                     list.add(new LichSuSuaChuaRow(
                             ngayStr,
                             bs != null ? bs : bienSo,
-                            psc != null ? psc : "---",
-                            yc != null ? yc : "---",
-                            hd != null ? hd : "Chưa phát hành",
-                            tt != null ? tt : "Đang sửa chữa",
-                            ktv != null ? ktv : "Chưa phân công",
+                            maPhieu != null ? maPhieu : "---",
+                            noiDung,
+                            hdHienThi,
+                            trangThaiHienThi,
+                            tenKTV != null && !tenKTV.isBlank() ? tenKTV : "Chưa phân công",
                             hanHT,
-                            ghiChu != null ? ghiChu : (yc != null ? yc : "---"),
+                            ghiChuHienThi,
                             docs
                     ));
                 }
             }
         }
         return list;
+    }
+
+    private static String formatTrangThaiPhieu(String rawStatus, String hdStatus) {
+        if (rawStatus == null) return "Chờ sửa chữa";
+        return switch (rawStatus.toUpperCase(Locale.ROOT)) {
+            case "CHO_SUA" -> "Chờ sửa chữa";
+            case "DANG_SUA" -> "Đang sửa chữa";
+            case "CHO_LINH_KIEN" -> "Chờ linh kiện";
+            case "HOAN_TAT" -> {
+                if ("Đã thanh toán".equalsIgnoreCase(hdStatus)) {
+                    yield "Đã thanh toán";
+                }
+                yield "Đã hoàn tất";
+            }
+            default -> rawStatus;
+        };
     }
 
     private static Xe fromResultSet(ResultSet rs) throws SQLException {
