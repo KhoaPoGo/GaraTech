@@ -1,5 +1,7 @@
 package entity;
 
+import enums.TrangThaiHoaDon;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -157,6 +159,14 @@ public class HoaDon {
 
 	public void setTrangThai(String trangThai) {
 		this.trangThai = trangThai;
+	}
+
+	public TrangThaiHoaDon getTrangThaiEnum() {
+		return TrangThaiHoaDon.fromLabel(trangThai);
+	}
+
+	public void setTrangThai(TrangThaiHoaDon tt) {
+		this.trangThai = tt != null ? tt.label() : null;
 	}
 
 	public String getPhuongThucTT() {
