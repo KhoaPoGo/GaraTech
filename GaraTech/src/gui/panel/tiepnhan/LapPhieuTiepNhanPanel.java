@@ -2,19 +2,23 @@ package gui.panel.tiepnhan;
 
 import bus.KhachHangXeBus;
 import bus.KhachHangXeBus.KhachHangOverview;
-import bus.TiepNhanXeBus;
-import bus.TiepNhanXeBus.TiepNhanInput;
+import bus.PhieuTiepNhanSuaChuaBus;
 import com.formdev.flatlaf.FlatClientProperties;
+import dao.DichVuDao;
+import dao.NhanVienDao;
+import entity.ChiTietDichVu;
+import entity.DichVu;
 import entity.KhachHang;
-import entity.PhieuTiepNhan;
+import entity.NhanVien;
 import entity.Xe;
 import enums.User;
 import gui.Navigator;
 import gui.Screen;
 import gui.component.Msg;
-import gui.component.StatusBadge;
 import gui.component.Theme;
 import gui.component.UI;
+import util.Fmt;
+import util.IdGenerator;
 import util.RoundedPanel;
 import util.Session;
 
@@ -22,18 +26,18 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
-import javax.swing.ScrollPaneConstants;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
@@ -50,6 +54,7 @@ import java.awt.GridLayout;
 import java.awt.Window;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -57,66 +62,68 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Màn hình Lập phiếu tiếp nhận mới.
+ * Màn hình Tạo phiếu tiếp nhận - sửa chữa mới.
+ * Tích hợp Kỹ thuật viên chính phụ trách và Dịch vụ đề nghị ban đầu.
  */
 public final class LapPhieuTiepNhanPanel extends JPanel {
 
-    private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm");
-    private static final DateTimeFormatter INPUT_DT_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    // Callbacks điều hướng
     private final Runnable onViewListCallback;
-    private final Consumer<PhieuTiepNhan> onSavedCallback;
+    private final Consumer<String> onSavedCallback;
+    private final PhieuTiepNhanSuaChuaBus phieuBus = new PhieuTiepNhanSuaChuaBus();
 
-    // Data State
+    // Dữ liệu tạm của màn hình
     private KhachHang selectedCustomer = null;
     private Xe selectedVehicle = null;
-    private float vehiclePreviousOdo = 0;
     private boolean isUpdatingVehicleCombo = false;
+    private final List<NhanVien> listTechnicians = new ArrayList<>();
+    private final List<DichVu> listAvailableServices = new ArrayList<>();
+    private final List<ChiTietDichVu> listSelectedServices = new ArrayList<>();
 
-    // Component: Banner thông báo nhận diện hồ sơ
-    private final RoundedPanel pBanner = new RoundedPanel(12, new Color(0xE9, 0xF5, 0xEF));
-    private final JLabel lblBannerMsg = new JLabel("");
+    // Banner trạng thái xanh lá
+    private final RoundedPanel pBanner = new RoundedPanel(12, new Color(0xEB, 0xF9, 0xF1));
+    private final JLabel lblBannerMsg = new JLabel();
 
-    // Form Left: Tra cứu & Chọn Khách hàng / Xe
-    private final JButton btnBrowseCust = UI.primaryButton("🔍 Tra cứu");
+    // Card 1: Khách hàng & Xe
     private final JLabel lblSelectedCustDisplay = new JLabel("Chưa chọn khách hàng");
+    private final JButton btnBrowseCust = UI.primaryButton("Tra cứu");
     private final JComboBox<String> cboVehicle = new JComboBox<>();
     private final JLabel lblSummaryContact = new JLabel("---");
-    private final JLabel lblSummaryVehicle = new JLabel("---");
+    private final JLabel lblSummaryVehicle = new JLabel("Chưa chọn phương tiện");
 
-    // Form Left: Thông tin tiếp nhận
-    private final JTextField txtMaPhieu = new JTextField("Tự động khi lưu");
-    private final JTextField txtTrangThai = new JTextField("Chờ khách hàng xác nhận");
-    private final JTextArea taYeuCauKhach = new JTextArea();
-    private final JTextArea taTinhTrangBanDau = new JTextArea();
-    private final JTextField txtOdo = new JTextField("0");
-    private final JLabel lblOdoHint = UI.muted("Số km không âm");
-    private final JComboBox<String> cboFuel = new JComboBox<>(new String[]{
-            "Hết xăng (0%)",
-            "1/4 bình (25%)",
-            "1/2 bình (50%)",
-            "3/4 bình (75%)",
-            "Đầy bình (100%)"
-    });
+    // Card 2: Thông tin tiếp nhận - sửa chữa (Đã bỏ trường Trạng thái và Thời gian hẹn trả dự kiến)
+    private final JTextField txtMaPhieu = new JTextField();
     private final JTextField txtThoiGianTiepNhan = new JTextField();
-    private final JTextField txtThoiGianHenTra = new JTextField();
+    private final JTextArea taYeuCauKhach = new JTextArea(3, 20);
+    private final JTextArea taTinhTrangBanDau = new JTextArea(3, 20);
+    private final JTextField txtOdo = new JTextField();
+    private final JComboBox<String> cboFuel = new JComboBox<>(new String[]{
+            "0% (Hết)", "25% (1/4 bình)", "50% (1/2 bình)", "75% (3/4 bình)", "100% (Đầy bình)"
+    });
     private final JTextField txtNhanVien = new JTextField();
+    private final JComboBox<String> cboTechnician = new JComboBox<>();
 
-    // Right Column: Summary Card
-    private final JLabel lblSumMaPhieu = new JLabel("Tự động khi lưu");
-    private final JLabel lblSumKhachHang = new JLabel("---");
-    private final JLabel lblSumBienSo = new JLabel("---");
-    private final JLabel lblSumThoiGian = new JLabel("---");
+    // Card 3: Dịch vụ đề nghị ban đầu
+    private final JComboBox<String> cboDichVu = new JComboBox<>();
+    private final JSpinner spnSoLuongDV = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
+    private final JTextField txtGhiChuDV = new JTextField();
+    private final JButton btnThemDV = UI.primaryButton("Thêm dịch vụ");
+    private final JButton btnBoDV = UI.dangerButton("Bỏ dịch vụ");
+    private final DefaultTableModel modelDichVu = new DefaultTableModel(
+            new String[]{"STT", "Mã DV", "Tên dịch vụ", "Đơn vị tính", "Số lượng", "Đơn giá", "Thành tiền", "Ghi chú"}, 0
+    ) {
+        @Override
+        public boolean isCellEditable(int r, int c) { return false; }
+    };
+    private final JTable tblDichVu = UI.table(modelDichVu);
+    private final JLabel lblTongTienDichVu = UI.label("Tổng tiền dịch vụ tạm tính: 0 đ", Font.BOLD, 14, Theme.NAVY);
 
-    // Checklist
-    private final JCheckBox chkConditionRecorded = new JCheckBox("Đã ghi nhận hiện trạng xe");
-    private final JCheckBox chkRequestConfirmed = new JCheckBox("Khách xác nhận yêu cầu ban đầu");
-
-    private final JButton btnConfirm = UI.primaryButton("Xác nhận tiếp nhận");
+    // Card 4: Nút hành động
+    private final JButton btnConfirm = UI.primaryButton("Tạo phiếu tiếp nhận - sửa chữa");
     private final JButton btnReset = UI.secondaryButton("Làm mới form");
 
-    public LapPhieuTiepNhanPanel(Runnable onViewListCallback, Consumer<PhieuTiepNhan> onSavedCallback) {
+    public LapPhieuTiepNhanPanel(Runnable onViewListCallback, Consumer<String> onSavedCallback) {
         this.onViewListCallback = onViewListCallback;
         this.onSavedCallback = onSavedCallback;
 
@@ -124,8 +131,12 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
         buildUI();
-        initEvents();
+        loadTechnicians();
+        loadServices();
         resetForm();
+
+        // ĐEM TOÀN BỘ CÁC LUỒNG GỌI XỬ LÝ SỰ KIỆN XUỐNG CUỐI CÙNG
+        initEvents();
     }
 
     private void buildUI() {
@@ -140,33 +151,32 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
         pBanner.setVisible(false);
 
         add(pBanner);
+        add(Box.createVerticalStrut(14));
+
+        // 2. Card 1: Khách hàng & Phương tiện
+        add(buildCardCustomerVehicle());
         add(Box.createVerticalStrut(16));
 
-        // 2. Nội dung 2 cột
-        JPanel twoColPanel = new JPanel(new BorderLayout(20, 0));
-        twoColPanel.setOpaque(false);
+        // 3. Card 2: Thông tin tiếp nhận - sửa chữa (kèm Kỹ thuật viên phụ trách)
+        add(buildCardReceptionInfo());
+        add(Box.createVerticalStrut(16));
 
-        JPanel leftCol = buildLeftColumn();
-        JPanel rightCol = buildRightColumn();
+        // 4. Card 3: Dịch vụ đề nghị ban đầu
+        add(buildCardServices());
+        add(Box.createVerticalStrut(16));
 
-        twoColPanel.add(leftCol, BorderLayout.CENTER);
-        twoColPanel.add(rightCol, BorderLayout.EAST);
-        twoColPanel.setAlignmentX(LEFT_ALIGNMENT);
-
-        add(twoColPanel);
+        // 5. Card 4: Nút tạo phiếu & Làm mới
+        add(buildCardActions());
+        add(Box.createVerticalStrut(24));
     }
 
-    private JPanel buildLeftColumn() {
-        JPanel col = new JPanel();
-        col.setOpaque(false);
-        col.setLayout(new BoxLayout(col, BoxLayout.Y_AXIS));
+    private JPanel buildCardCustomerVehicle() {
+        RoundedPanel card = new RoundedPanel(16, Theme.CARD);
+        card.setLayout(new BorderLayout(0, 16));
+        card.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        card.setAlignmentX(LEFT_ALIGNMENT);
 
-        // Card 1: Khách hàng & Phương tiện
-        RoundedPanel cardCustVeh = new RoundedPanel(16, Theme.CARD);
-        cardCustVeh.setLayout(new BorderLayout(0, 16));
-        cardCustVeh.setBorder(BorderFactory.createEmptyBorder(22, 24, 22, 24));
-
-        cardCustVeh.add(UI.h2("Khách hàng & phương tiện"), BorderLayout.NORTH);
+        card.add(UI.h2("Khách hàng & phương tiện"), BorderLayout.NORTH);
 
         JPanel cvBody = new JPanel();
         cvBody.setOpaque(false);
@@ -190,7 +200,7 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
         lblSelectedCustDisplay.setForeground(Theme.MUTED);
         pCustBox.add(lblSelectedCustDisplay, BorderLayout.CENTER);
 
-        btnBrowseCust.setPreferredSize(new Dimension(110, 38));
+        btnBrowseCust.setPreferredSize(new Dimension(100, 38));
         pCustCol.add(pCustBox, BorderLayout.CENTER);
         pCustCol.add(btnBrowseCust, BorderLayout.EAST);
 
@@ -224,167 +234,445 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
         pSummaryRow.setAlignmentX(LEFT_ALIGNMENT);
         cvBody.add(pSummaryRow);
 
-        cardCustVeh.add(cvBody, BorderLayout.CENTER);
-        cardCustVeh.setAlignmentX(LEFT_ALIGNMENT);
-        col.add(cardCustVeh);
+        card.add(cvBody, BorderLayout.CENTER);
+        return card;
+    }
 
-        col.add(Box.createVerticalStrut(18));
+    private JPanel buildCardReceptionInfo() {
+        RoundedPanel card = new RoundedPanel(16, Theme.CARD);
+        card.setLayout(new BorderLayout(0, 16));
+        card.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        card.setAlignmentX(LEFT_ALIGNMENT);
 
-        // Card 2: Thông tin tiếp nhận
-        RoundedPanel cardInfo = new RoundedPanel(16, Theme.CARD);
-        cardInfo.setLayout(new BorderLayout(0, 16));
-        cardInfo.setBorder(BorderFactory.createEmptyBorder(22, 24, 22, 24));
-
-        cardInfo.add(UI.h2("Thông tin tiếp nhận"), BorderLayout.NORTH);
+        card.add(UI.h2("Thông tin tiếp nhận - sửa chữa & phân công"), BorderLayout.NORTH);
 
         JPanel infoBody = new JPanel();
         infoBody.setOpaque(false);
         infoBody.setLayout(new BoxLayout(infoBody, BoxLayout.Y_AXIS));
 
-        // Row 1: Mã phiếu | Trạng thái ban đầu
+        // Row 1: Mã phiếu | Thời gian tiếp nhận (Đã bỏ trường Trạng thái)
         JPanel r1 = new JPanel(new GridLayout(1, 2, 20, 0));
         r1.setOpaque(false);
         txtMaPhieu.setEditable(false);
         txtMaPhieu.setBackground(new Color(0xF8FAFC));
-        txtTrangThai.setEditable(false);
-        txtTrangThai.setBackground(new Color(0xF8FAFC));
-        r1.add(formFieldWrap("Mã phiếu tiếp nhận", txtMaPhieu, null));
-        r1.add(formFieldWrap("Trạng thái ban đầu", txtTrangThai, null));
+        txtThoiGianTiepNhan.setEditable(false);
+        txtThoiGianTiepNhan.setBackground(new Color(0xF8FAFC));
+        r1.add(formFieldWrap("Mã phiếu tiếp nhận - sửa chữa (Tự động phát sinh)", txtMaPhieu, null));
+        r1.add(formFieldWrap("Thời gian tiếp nhận *", txtThoiGianTiepNhan, null));
         r1.setAlignmentX(LEFT_ALIGNMENT);
         infoBody.add(r1);
         infoBody.add(Box.createVerticalStrut(14));
 
-        // Row 2: Yêu cầu của khách hàng (Có viền rõ ràng, cuộn mượt, không giới hạn ký tự)
-        infoBody.add(formScrollableTextArea("Yêu cầu của khách hàng *", taYeuCauKhach));
+        // Row 2: Yêu cầu của khách hàng
+        JPanel r2 = formFieldWrap("Yêu cầu của khách hàng *", taYeuCauKhach, "Ghi lại nguyên văn yêu cầu hoặc mô tả sự cố từ khách hàng...");
+        r2.setAlignmentX(LEFT_ALIGNMENT);
+        infoBody.add(r2);
         infoBody.add(Box.createVerticalStrut(14));
 
-        // Row 3: Tình trạng ban đầu / Hiện trạng xe (Có viền rõ ràng, cuộn mượt, không giới hạn ký tự)
-        infoBody.add(formScrollableTextArea("Tình trạng ban đầu / Hiện trạng xe *", taTinhTrangBanDau));
+        // Row 3: Hiện trạng xe lúc nhận
+        JPanel r3 = formFieldWrap("Hiện trạng xe lúc tiếp nhận *", taTinhTrangBanDau, "Ghi nhận vết trầy xước, đèn báo lỗi, đồ đạc có giá trị trên xe...");
+        r3.setAlignmentX(LEFT_ALIGNMENT);
+        infoBody.add(r3);
         infoBody.add(Box.createVerticalStrut(14));
 
-        // Row 4: ODO hiện tại | Mức nhiên liệu
+        // Row 4: ODO | Mức nhiên liệu
         JPanel r4 = new JPanel(new GridLayout(1, 2, 20, 0));
         r4.setOpaque(false);
-        r4.add(formFieldWrapWithCustomHint("Số km hiện tại (ODO) *", txtOdo, lblOdoHint));
-        r4.add(formFieldWrap("Mức nhiên liệu *", cboFuel, null));
+        r4.add(formFieldWrap("Số km hiện tại (ODO) *", txtOdo, null));
+        r4.add(formFieldWrap("Mức nhiên liệu lúc nhận *", cboFuel, null));
         r4.setAlignmentX(LEFT_ALIGNMENT);
         infoBody.add(r4);
         infoBody.add(Box.createVerticalStrut(14));
 
-        // Row 5: Thời gian tiếp nhận | Hẹn trả
+        // Row 5: Nhân viên tiếp nhận | KỸ THUẬT VIÊN CHÍNH PHỤ TRÁCH (Đã bỏ trường thời gian hẹn trả dự kiến)
         JPanel r5 = new JPanel(new GridLayout(1, 2, 20, 0));
         r5.setOpaque(false);
-        r5.add(formFieldWrap("Thời gian tiếp nhận *", txtThoiGianTiepNhan, null));
-        r5.add(formFieldWrap("Hẹn trả xe (tùy chọn)", txtThoiGianHenTra, null));
-        r5.setAlignmentX(LEFT_ALIGNMENT);
-        infoBody.add(r5);
-        infoBody.add(Box.createVerticalStrut(14));
-
-        // Row 6: Nhân viên tiếp nhận
         txtNhanVien.setEditable(false);
         txtNhanVien.setBackground(new Color(0xF8FAFC));
-        JPanel r6 = formFieldWrap("Nhân viên tiếp nhận *", txtNhanVien, null);
-        r6.setAlignmentX(LEFT_ALIGNMENT);
-        infoBody.add(r6);
+        r5.add(formFieldWrap("Nhân viên tiếp nhận *", txtNhanVien, null));
+        r5.add(formFieldWrap("Kỹ thuật viên chính phụ trách *", cboTechnician, null));
+        r5.setAlignmentX(LEFT_ALIGNMENT);
+        infoBody.add(r5);
 
-        cardInfo.add(infoBody, BorderLayout.CENTER);
-        cardInfo.setAlignmentX(LEFT_ALIGNMENT);
-        col.add(cardInfo);
-
-        return col;
+        card.add(infoBody, BorderLayout.CENTER);
+        return card;
     }
 
-    private JPanel buildRightColumn() {
-        JPanel col = new JPanel();
-        col.setOpaque(false);
-        col.setLayout(new BoxLayout(col, BoxLayout.Y_AXIS));
-        col.setPreferredSize(new Dimension(340, 10));
+    private JPanel buildCardServices() {
+        RoundedPanel card = new RoundedPanel(16, Theme.CARD);
+        card.setLayout(new BorderLayout(0, 16));
+        card.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        card.setAlignmentX(LEFT_ALIGNMENT);
 
-        // Card Tóm tắt phiếu tiếp nhận
-        RoundedPanel cardSum = new RoundedPanel(16, Theme.CARD);
-        cardSum.setLayout(new BoxLayout(cardSum, BoxLayout.Y_AXIS));
-        cardSum.setBorder(BorderFactory.createEmptyBorder(22, 22, 22, 22));
+        card.add(UI.h2("Dịch vụ đề nghị ban đầu"), BorderLayout.NORTH);
 
-        JLabel lblSumTitle = UI.h2("Tóm tắt phiếu tiếp nhận");
-        lblSumTitle.setAlignmentX(LEFT_ALIGNMENT);
-        cardSum.add(lblSumTitle);
-        cardSum.add(Box.createVerticalStrut(14));
+        JPanel sBody = new JPanel();
+        sBody.setOpaque(false);
+        sBody.setLayout(new BoxLayout(sBody, BoxLayout.Y_AXIS));
 
-        // Badge trạng thái
-        JPanel pBadge = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        pBadge.setOpaque(false);
-        StatusBadge statusBadge = new StatusBadge("Chờ khách hàng xác nhận");
-        pBadge.add(statusBadge);
-        pBadge.setAlignmentX(LEFT_ALIGNMENT);
-        cardSum.add(pBadge);
-        cardSum.add(Box.createVerticalStrut(16));
+        // Hàng 1: Chọn dịch vụ + Số lượng + Ghi chú
+        JPanel rowInputs = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        rowInputs.setOpaque(false);
 
-        // Key-Value summaries
-        cardSum.add(buildSummaryItem("Mã phiếu", lblSumMaPhieu));
-        cardSum.add(Box.createVerticalStrut(10));
-        cardSum.add(buildSummaryItem("Khách hàng", lblSumKhachHang));
-        cardSum.add(Box.createVerticalStrut(10));
-        cardSum.add(buildSummaryItem("Biển số", lblSumBienSo));
-        cardSum.add(Box.createVerticalStrut(10));
-        cardSum.add(buildSummaryItem("Tiếp nhận", lblSumThoiGian));
-        cardSum.add(Box.createVerticalStrut(18));
+        rowInputs.add(UI.label("Chọn dịch vụ:", Font.BOLD, 12, Theme.TEXT));
+        cboDichVu.setFont(Theme.font(Font.PLAIN, 13));
+        cboDichVu.setPreferredSize(new Dimension(340, 38));
+        rowInputs.add(cboDichVu);
 
-        // Separator
-        JPanel sep = new JPanel();
-        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        sep.setBackground(Theme.BORDER);
-        sep.setAlignmentX(LEFT_ALIGNMENT);
-        cardSum.add(sep);
-        cardSum.add(Box.createVerticalStrut(18));
+        rowInputs.add(UI.label("Số lượng:", Font.BOLD, 12, Theme.TEXT));
+        spnSoLuongDV.setFont(Theme.font(Font.PLAIN, 13));
+        spnSoLuongDV.setPreferredSize(new Dimension(70, 38));
+        rowInputs.add(spnSoLuongDV);
 
-        // Checklist 2 mục
-        styleCheckbox(chkConditionRecorded);
-        styleCheckbox(chkRequestConfirmed);
+        rowInputs.add(UI.label("Ghi chú:", Font.BOLD, 12, Theme.TEXT));
+        txtGhiChuDV.setFont(Theme.font(Font.PLAIN, 13));
+        txtGhiChuDV.setPreferredSize(new Dimension(220, 38));
+        txtGhiChuDV.putClientProperty("JTextField.placeholderText", "Ghi chú thực hiện...");
+        rowInputs.add(txtGhiChuDV);
 
-        cardSum.add(chkConditionRecorded);
-        cardSum.add(Box.createVerticalStrut(10));
-        cardSum.add(chkRequestConfirmed);
-        cardSum.add(Box.createVerticalStrut(24));
+        rowInputs.setAlignmentX(LEFT_ALIGNMENT);
+        sBody.add(rowInputs);
+        sBody.add(Box.createVerticalStrut(10));
 
-        // Nút hành động
-        btnConfirm.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-        btnConfirm.setAlignmentX(LEFT_ALIGNMENT);
-        cardSum.add(btnConfirm);
-        cardSum.add(Box.createVerticalStrut(10));
+        // Hàng 2: Duy nhất 2 nút thao tác rõ ràng: "Thêm dịch vụ" và "Bỏ dịch vụ"
+        JPanel rowBtns = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        rowBtns.setOpaque(false);
 
-        btnReset.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        btnReset.setAlignmentX(LEFT_ALIGNMENT);
-        cardSum.add(btnReset);
+        btnThemDV.setFont(Theme.font(Font.BOLD, 13));
+        btnThemDV.setPreferredSize(new Dimension(145, 38));
+        rowBtns.add(btnThemDV);
 
-        cardSum.setAlignmentX(LEFT_ALIGNMENT);
-        col.add(cardSum);
+        btnBoDV.setFont(Theme.font(Font.BOLD, 13));
+        btnBoDV.setPreferredSize(new Dimension(135, 38));
+        rowBtns.add(btnBoDV);
 
-        return col;
+        JLabel lblGuide = UI.muted("(Chọn dịch vụ rồi bấm 'Thêm dịch vụ'. Để xóa, bấm chọn dòng trong bảng rồi bấm 'Bỏ dịch vụ')");
+        rowBtns.add(lblGuide);
+
+        rowBtns.setAlignmentX(LEFT_ALIGNMENT);
+        sBody.add(rowBtns);
+        sBody.add(Box.createVerticalStrut(14));
+
+        // Bảng dịch vụ đề nghị
+        tblDichVu.setFont(Theme.font(Font.PLAIN, 12));
+        tblDichVu.setRowHeight(34);
+        tblDichVu.setShowGrid(false);
+        tblDichVu.getTableHeader().setFont(Theme.font(Font.BOLD, 11));
+        tblDichVu.getTableHeader().setPreferredSize(new Dimension(0, 34));
+
+        tblDichVu.getColumnModel().getColumn(0).setPreferredWidth(45);
+        tblDichVu.getColumnModel().getColumn(1).setPreferredWidth(90);
+        tblDichVu.getColumnModel().getColumn(2).setPreferredWidth(260);
+        tblDichVu.getColumnModel().getColumn(3).setPreferredWidth(80);
+        tblDichVu.getColumnModel().getColumn(4).setPreferredWidth(70);
+        tblDichVu.getColumnModel().getColumn(5).setPreferredWidth(110);
+        tblDichVu.getColumnModel().getColumn(6).setPreferredWidth(120);
+        tblDichVu.getColumnModel().getColumn(7).setPreferredWidth(160);
+
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
+        tblDichVu.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
+        tblDichVu.getColumnModel().getColumn(4).setCellRenderer(centerRenderer);
+
+        JScrollPane scroll = new JScrollPane(tblDichVu);
+        scroll.setBorder(BorderFactory.createLineBorder(Theme.BORDER, 1));
+        scroll.setPreferredSize(new Dimension(0, 160));
+        scroll.setAlignmentX(LEFT_ALIGNMENT);
+        sBody.add(scroll);
+        sBody.add(Box.createVerticalStrut(12));
+
+        // Dòng tổng tiền dịch vụ tạm tính (Không có nút bỏ dịch vụ thừa ở đây)
+        JPanel pTong = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        pTong.setOpaque(false);
+        pTong.add(lblTongTienDichVu);
+        pTong.setAlignmentX(LEFT_ALIGNMENT);
+        sBody.add(pTong);
+
+        card.add(sBody, BorderLayout.CENTER);
+        return card;
     }
 
-    private void initEvents() {
-        // Mở dialog tra cứu danh sách khách hàng
-        btnBrowseCust.addActionListener(e -> handleOpenBrowseDialog());
+    private JPanel buildCardActions() {
+        RoundedPanel card = new RoundedPanel(16, Theme.CARD);
+        card.setLayout(new BorderLayout());
+        card.setBorder(BorderFactory.createEmptyBorder(18, 24, 18, 24));
+        card.setAlignmentX(LEFT_ALIGNMENT);
 
-        // Chọn xe trên ComboBox
-        cboVehicle.addActionListener(e -> {
-            if (isUpdatingVehicleCombo) return;
-            int idx = cboVehicle.getSelectedIndex();
-            if (selectedCustomer != null && idx > 0) {
-                List<Xe> vehicles = KhachHangXeBus.getDanhSachXe(selectedCustomer.getMaKH());
-                if (idx - 1 < vehicles.size()) {
-                    selectVehicle(vehicles.get(idx - 1));
-                }
-            } else if (idx == 0) {
-                selectVehicle(null);
+        // Bên phải: Các nút hành động
+        JPanel pBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        pBtns.setOpaque(false);
+
+        btnReset.setPreferredSize(new Dimension(140, 42));
+        btnConfirm.setPreferredSize(new Dimension(240, 42));
+
+        pBtns.add(btnReset);
+        pBtns.add(btnConfirm);
+        card.add(pBtns, BorderLayout.EAST);
+
+        return card;
+    }
+
+    // Helper UI Builders
+    private JPanel formFieldWrap(String label, JComponent comp, String hint) {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+
+        JLabel l = new JLabel(label);
+        l.setFont(Theme.font(Font.BOLD, 12));
+        l.setForeground(Theme.TEXT);
+        l.setAlignmentX(LEFT_ALIGNMENT);
+        p.add(l);
+        p.add(Box.createVerticalStrut(6));
+
+        comp.setFont(Theme.font(Font.PLAIN, 13));
+        if (comp instanceof JTextArea ta) {
+            ta.setLineWrap(true);
+            ta.setWrapStyleWord(true);
+            ta.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+            if (hint != null) ta.putClientProperty("JTextField.placeholderText", hint);
+            JScrollPane scroll = new JScrollPane(ta);
+            scroll.putClientProperty(FlatClientProperties.STYLE, "arc:10; borderColor:#D5DBE5");
+            scroll.setPreferredSize(new Dimension(100, 75));
+            scroll.setAlignmentX(LEFT_ALIGNMENT);
+            p.add(scroll);
+        } else {
+            if (comp instanceof JTextField tf) {
+                tf.putClientProperty(FlatClientProperties.STYLE, "arc:10; margin:6,10,6,10; borderColor:#D5DBE5");
+                if (hint != null) tf.putClientProperty("JTextField.placeholderText", hint);
+            } else if (comp instanceof JComboBox) {
+                comp.putClientProperty(FlatClientProperties.STYLE, "arc:10; borderColor:#D5DBE5");
             }
-        });
+            comp.setPreferredSize(new Dimension(100, 38));
+            comp.setAlignmentX(LEFT_ALIGNMENT);
+            p.add(comp);
+        }
 
-        // Nút Xác nhận tiếp nhận
-        btnConfirm.addActionListener(e -> handleConfirmReception());
+        return p;
+    }
 
-        // Nút Reset
-        btnReset.addActionListener(e -> resetForm());
+    private JPanel formFieldWrapComponent(String label, JComponent comp) {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+
+        JLabel l = new JLabel(label);
+        l.setFont(Theme.font(Font.BOLD, 12));
+        l.setForeground(Theme.TEXT);
+        l.setAlignmentX(LEFT_ALIGNMENT);
+        p.add(l);
+        p.add(Box.createVerticalStrut(6));
+
+        comp.setAlignmentX(LEFT_ALIGNMENT);
+        p.add(comp);
+
+        return p;
+    }
+
+    // Logic Functions
+    private void loadTechnicians() {
+        cboTechnician.removeAllItems();
+        cboTechnician.addItem("-- Chọn Kỹ thuật viên chính phụ trách --");
+        try {
+            listTechnicians.clear();
+            listTechnicians.addAll(new NhanVienDao().findKyThuatVien());
+            for (NhanVien nv : listTechnicians) {
+                cboTechnician.addItem(nv.getMaNV() + " - " + nv.getHoTen());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadServices() {
+        cboDichVu.removeAllItems();
+        cboDichVu.addItem("-- Chọn dịch vụ đề nghị ban đầu --");
+        try {
+            listAvailableServices.clear();
+            listAvailableServices.addAll(new DichVuDao().findActive());
+            for (DichVu dv : listAvailableServices) {
+                cboDichVu.addItem(dv.getMaDichVu() + " - " + dv.getTenDichVu() + " (" + Fmt.money(dv.getTienCong()) + ")");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void selectCustomer(KhachHang kh) {
+        this.selectedCustomer = kh;
+        if (kh == null) {
+            lblSelectedCustDisplay.setText("Chưa chọn khách hàng");
+            lblSelectedCustDisplay.setForeground(Theme.MUTED);
+            lblSummaryContact.setText("---");
+            btnBrowseCust.setText("Tra cứu");
+            populateVehicles(null);
+            pBanner.setVisible(false);
+            return;
+        }
+
+        lblSelectedCustDisplay.setText(kh.getHoTen() + " (" + kh.getMaKH() + ")");
+        lblSelectedCustDisplay.setForeground(Theme.TEXT);
+        lblSummaryContact.setText(kh.getSoDienThoai() + " · " + kh.getDiemTichLuy() + " điểm");
+        btnBrowseCust.setText("Đổi khách");
+
+        List<Xe> vehicles = KhachHangXeBus.getDanhSachXe(kh.getMaKH());
+        populateVehicles(vehicles);
+
+        if (vehicles.isEmpty()) {
+            Msg.info(this, "Khách hàng " + kh.getHoTen() + " chưa có phương tiện liên kết.\nBạn có thể thêm xe cho khách hàng tại màn hình Quản lý Xe.");
+        }
+    }
+
+    private void populateVehicles(List<Xe> vehicles) {
+        isUpdatingVehicleCombo = true;
+        cboVehicle.removeAllItems();
+
+        if (vehicles == null || vehicles.isEmpty()) {
+            cboVehicle.addItem("-- Khách hàng chưa có xe --");
+            cboVehicle.setEnabled(false);
+            selectVehicle(null);
+        } else {
+            cboVehicle.addItem("-- Chọn phương tiện của khách --");
+            for (Xe x : vehicles) {
+                cboVehicle.addItem(x.getBienSo() + " - " + x.getHangXe() + " " + x.getModel() + " (" + x.getMauXe() + ")");
+            }
+            cboVehicle.setEnabled(true);
+            cboVehicle.setSelectedIndex(1);
+            selectVehicle(vehicles.get(0));
+        }
+        isUpdatingVehicleCombo = false;
+    }
+
+    public void selectVehicle(Xe xe) {
+        this.selectedVehicle = xe;
+        if (xe == null) {
+            lblSummaryVehicle.setText("Chưa chọn phương tiện");
+            lblSummaryVehicle.setForeground(Theme.MUTED);
+            pBanner.setVisible(false);
+            return;
+        }
+
+        lblSummaryVehicle.setText(xe.getBienSo() + " · " + xe.getHangXe() + " " + xe.getModel() + " (" + xe.getNamSanXuat() + ")");
+        lblSummaryVehicle.setForeground(Theme.TEXT);
+
+        lblBannerMsg.setText(String.format("Đã chọn hồ sơ %s và xe %s. Tiếp nhận đúng phương tiện, tránh tạo trùng lặp.",
+                selectedCustomer != null ? selectedCustomer.getHoTen() : "", xe.getBienSo()));
+        pBanner.setVisible(true);
+
+        float lastOdo = xe.getSoKmHienTai();
+        if (lastOdo > 0) {
+            txtOdo.setText(String.format("%.0f", lastOdo));
+        }
+
+        if (cboVehicle.isEnabled() && cboVehicle.getItemCount() > 1) {
+            for (int i = 1; i < cboVehicle.getItemCount(); i++) {
+                String item = cboVehicle.getItemAt(i);
+                if (item != null && item.startsWith(xe.getBienSo())) {
+                    if (cboVehicle.getSelectedIndex() != i) {
+                        isUpdatingVehicleCombo = true;
+                        cboVehicle.setSelectedIndex(i);
+                        isUpdatingVehicleCombo = false;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    public void resetForm() {
+        // Tự động phát sinh mã phiếu tiếp nhận từ cơ sở dữ liệu
+        try {
+            txtMaPhieu.setText(IdGenerator.next(IdGenerator.Kind.PHIEU_TIEP_NHAN_SUA_CHUA));
+        } catch (Exception ex) {
+            txtMaPhieu.setText("PSC-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + "-001");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        txtThoiGianTiepNhan.setText(now.format(DT_FMT));
+
+        User u = Session.user();
+        txtNhanVien.setText(u != null ? u.hoTen() : "Nguyễn Văn Tiếp Nhận (NV26002)");
+
+        selectCustomer(null);
+        selectVehicle(null);
+
+        taYeuCauKhach.setText("");
+        taTinhTrangBanDau.setText("");
+        txtOdo.setText("");
+        cboFuel.setSelectedIndex(2); // 50%
+        if (cboTechnician.getItemCount() > 0) {
+            cboTechnician.setSelectedIndex(0);
+        }
+
+        listSelectedServices.clear();
+        capNhatBangDichVu();
+        cboDichVu.setSelectedIndex(0);
+        spnSoLuongDV.setValue(1);
+        txtGhiChuDV.setText("");
+    }
+
+    private void themDichVu() {
+        int idx = cboDichVu.getSelectedIndex();
+        if (idx <= 0 || idx - 1 >= listAvailableServices.size()) {
+            Msg.error(this, "Vui lòng chọn một dịch vụ từ danh mục.");
+            return;
+        }
+
+        DichVu dv = listAvailableServices.get(idx - 1);
+        for (ChiTietDichVu ct : listSelectedServices) {
+            if (ct.getDichVu() != null && ct.getDichVu().getMaDichVu().equals(dv.getMaDichVu())) {
+                Msg.info(this, "Dịch vụ '" + dv.getTenDichVu() + "' đã có trong danh mục đề nghị.");
+                return;
+            }
+        }
+
+        int sl = (int) spnSoLuongDV.getValue();
+        String ghiChu = txtGhiChuDV.getText().trim();
+
+        ChiTietDichVu ct = new ChiTietDichVu();
+        ct.setDichVu(dv);
+        ct.setSoLuong(sl);
+        ct.setDonGiaThucHien(dv.getTienCong());
+        ct.setGhiChu(ghiChu.isEmpty() ? null : ghiChu);
+        listSelectedServices.add(ct);
+
+        capNhatBangDichVu();
+        txtGhiChuDV.setText("");
+        spnSoLuongDV.setValue(1);
+    }
+
+    private void boDichVu() {
+        int row = tblDichVu.getSelectedRow();
+        if (row < 0 || row >= listSelectedServices.size()) {
+            Msg.error(this, "Vui lòng chọn dòng dịch vụ cần bỏ.");
+            return;
+        }
+        listSelectedServices.remove(row);
+        capNhatBangDichVu();
+    }
+
+    private void capNhatBangDichVu() {
+        modelDichVu.setRowCount(0);
+        double tong = 0;
+        int stt = 1;
+        for (ChiTietDichVu ct : listSelectedServices) {
+            DichVu dv = ct.getDichVu();
+            double dg = ct.getDonGiaThucHien();
+            int sl = ct.getSoLuong();
+            double tt = dg * sl;
+            tong += tt;
+            modelDichVu.addRow(new Object[]{
+                    stt++,
+                    dv != null ? dv.getMaDichVu() : "",
+                    dv != null ? dv.getTenDichVu() : "",
+                    "Lần",
+                    sl,
+                    Fmt.money(dg),
+                    Fmt.money(tt),
+                    ct.getGhiChu() != null ? ct.getGhiChu() : ""
+            });
+        }
+        lblTongTienDichVu.setText("Tổng tiền dịch vụ tạm tính: " + Fmt.money(tong));
     }
 
     private void handleOpenBrowseDialog() {
@@ -404,111 +692,6 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
         Navigator.go(Screen.KHACH_HANG_XE);
     }
 
-    public void refreshCustomerList() {
-        // Không cần load toàn bộ vào combobox nữa
-    }
-
-    /**
-     * Nạp dữ liệu khởi đầu khi chuyển từ màn hình khác sang (ví dụ bấm "Tiếp nhận xe" ở Hồ sơ khách).
-     */
-    public void setInitialCustomerAndVehicle(KhachHang kh, Xe xe) {
-        if (kh != null) {
-            selectCustomer(kh);
-        }
-        if (xe != null) {
-            selectVehicle(xe);
-        }
-    }
-
-    private void selectCustomer(KhachHang kh) {
-        this.selectedCustomer = kh;
-        isUpdatingVehicleCombo = true;
-        try {
-            cboVehicle.removeAllItems();
-            cboVehicle.addItem("-- Chọn xe theo biển số --");
-
-            if (kh == null) {
-                lblSelectedCustDisplay.setText("Chưa chọn khách hàng");
-                lblSelectedCustDisplay.setForeground(Theme.MUTED);
-                btnBrowseCust.setText("🔍 Tra cứu");
-
-                lblSummaryContact.setText("---");
-                lblSummaryVehicle.setText("---");
-                lblSumKhachHang.setText("---");
-                lblSumBienSo.setText("---");
-                pBanner.setVisible(false);
-                selectVehicle(null);
-                return;
-            }
-
-            // Cập nhật thông tin khách hàng đang chọn
-            lblSelectedCustDisplay.setText(String.format("✓ %s · %s (%s)", kh.getHoTen(), kh.getSoDienThoai(), kh.getMaKH()));
-            lblSelectedCustDisplay.setForeground(new Color(0x10, 0x25, 0x44));
-            btnBrowseCust.setText("🔍 Đổi khách");
-
-            lblSummaryContact.setText(kh.getSoDienThoai() != null && !kh.getSoDienThoai().isBlank() ? kh.getSoDienThoai() : "---");
-            lblSumKhachHang.setText(String.format("%s (%s)", kh.getHoTen(), kh.getMaKH()));
-
-            List<Xe> vehicles = KhachHangXeBus.getDanhSachXe(kh.getMaKH());
-            for (Xe x : vehicles) {
-                cboVehicle.addItem(String.format("%s · %s %s (%s)", x.getBienSo(), x.getHangXe(), x.getModel(), x.getMauXe()));
-            }
-
-            // Tự động chọn xe đầu tiên nếu khách có xe
-            if (!vehicles.isEmpty()) {
-                cboVehicle.setSelectedIndex(1);
-                selectVehicle(vehicles.get(0));
-            } else {
-                selectVehicle(null);
-                Msg.info(this, "Khách hàng " + kh.getHoTen() + " chưa có phương tiện liên kết.\nBạn có thể thêm xe cho khách trước khi tiếp nhận.");
-            }
-        } finally {
-            isUpdatingVehicleCombo = false;
-        }
-    }
-
-    private void selectVehicle(Xe xe) {
-        this.selectedVehicle = xe;
-        if (xe == null) {
-            lblSummaryVehicle.setText("Chưa chọn xe");
-            lblSumBienSo.setText("---");
-            vehiclePreviousOdo = 0;
-            lblOdoHint.setText("Số km không âm");
-            pBanner.setVisible(false);
-            return;
-        }
-
-        lblSummaryVehicle.setText(String.format("%s · %s %s %d · %s", xe.getBienSo(), xe.getHangXe(), xe.getModel(), xe.getNamSanXuat(), xe.getMauXe()));
-        lblSumBienSo.setText(xe.getBienSo());
-
-        // Lấy ODO gần nhất
-        vehiclePreviousOdo = TiepNhanXeBus.layOdoGanNhat(xe.getBienSo());
-        txtOdo.setText(String.format("%.0f", Math.max(xe.getSoKmHienTai(), vehiclePreviousOdo)));
-        lblOdoHint.setText(String.format("Không nhỏ hơn lần ghi nhận trước: %,.0f km", vehiclePreviousOdo));
-
-        // Hiển thị banner xanh
-        lblBannerMsg.setText(String.format("Đã chọn hồ sơ %s và xe %s. Tiếp nhận đúng phương tiện, tránh tạo bản ghi trùng.",
-                selectedCustomer != null ? selectedCustomer.getHoTen() : "", xe.getBienSo()));
-        pBanner.setVisible(true);
-
-        // Đồng bộ combobox
-        if (!isUpdatingVehicleCombo && cboVehicle.getItemCount() > 1) {
-            isUpdatingVehicleCombo = true;
-            try {
-                for (int i = 1; i < cboVehicle.getItemCount(); i++) {
-                    if (cboVehicle.getItemAt(i).startsWith(xe.getBienSo())) {
-                        if (cboVehicle.getSelectedIndex() != i) {
-                            cboVehicle.setSelectedIndex(i);
-                        }
-                        break;
-                    }
-                }
-            } finally {
-                isUpdatingVehicleCombo = false;
-            }
-        }
-    }
-
     private void handleConfirmReception() {
         try {
             if (selectedCustomer == null) {
@@ -522,17 +705,14 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
                 return;
             }
 
-            // Kiểm tra Checklist
-            if (!chkConditionRecorded.isSelected()) {
-                Msg.error(this, "Vui lòng xác nhận mục: 'Đã ghi nhận hiện trạng xe'.");
-                chkConditionRecorded.requestFocus();
+            // Kiểm tra Kỹ thuật viên chính phụ trách
+            int idxKtv = cboTechnician.getSelectedIndex();
+            if (idxKtv <= 0 || idxKtv - 1 >= listTechnicians.size()) {
+                Msg.error(this, "Vui lòng chỉ định Kỹ thuật viên chính phụ trách xe.");
+                cboTechnician.requestFocus();
                 return;
             }
-            if (!chkRequestConfirmed.isSelected()) {
-                Msg.error(this, "Vui lòng xác nhận mục: 'Khách xác nhận yêu cầu ban đầu'.");
-                chkRequestConfirmed.requestFocus();
-                return;
-            }
+            NhanVien ktvChon = listTechnicians.get(idxKtv - 1);
 
             String yeuCau = taYeuCauKhach.getText().trim();
             if (yeuCau.isEmpty()) {
@@ -559,40 +739,33 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
             };
 
             LocalDateTime tgTiepNhan = LocalDateTime.now();
-            LocalDateTime tgHenTra = null;
-            String henTraStr = txtThoiGianHenTra.getText().trim();
-            if (!henTraStr.isEmpty()) {
-                try {
-                    tgHenTra = LocalDateTime.parse(henTraStr, INPUT_DT_FMT);
-                } catch (Exception ex) {
-                    Msg.error(this, "Định dạng thời gian hẹn trả không hợp lệ (mẫu: dd/MM/yyyy HH:mm).");
-                    txtThoiGianHenTra.requestFocus();
-                    return;
-                }
-            }
+            LocalDateTime tgHenTra = null; // Đã bỏ trường nhập hẹn trả dự kiến
 
             User u = Session.user();
             String maNV = u != null ? u.maNV() : "NV26002";
 
-            TiepNhanInput input = new TiepNhanInput(
+            // 1. Tạo phiếu tiếp nhận - sửa chữa thống nhất (CHO_SUA)
+            PhieuTiepNhanSuaChuaBus.TiepNhanInput inputUnified = new PhieuTiepNhanSuaChuaBus.TiepNhanInput(
                     selectedCustomer.getMaKH(),
                     selectedVehicle.getBienSo(),
                     maNV,
+                    ktvChon.getMaNV(),
                     odo,
                     fuel,
-                    tinhTrang,
                     yeuCau,
+                    tinhTrang,
                     tgTiepNhan,
                     tgHenTra
             );
 
-            PhieuTiepNhan ptn = TiepNhanXeBus.taoPhieuTiepNhan(input);
+            String maPhieu = phieuBus.taoPhieuTiepNhan(inputUnified, listSelectedServices);
 
-            Msg.info(this, String.format("Tiếp nhận thành công xe %s!\nMã phiếu tiếp nhận: %s\nTrạng thái: Chờ khách hàng xác nhận.",
-                    selectedVehicle.getBienSo(), ptn.getMaPhieuTN()));
+            Msg.info(this, String.format(
+                    "Tạo thành công phiếu tiếp nhận - sửa chữa cho xe %s!\nMã phiếu: %s\nKỹ thuật viên phụ trách: %s\nTrạng thái: Chờ sửa chữa (CHO_SUA).",
+                    selectedVehicle.getBienSo(), maPhieu, ktvChon.getHoTen()));
 
             if (onSavedCallback != null) {
-                onSavedCallback.accept(ptn);
+                onSavedCallback.accept(maPhieu);
             }
 
             resetForm();
@@ -607,166 +780,22 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
         }
     }
 
-    public void resetForm() {
-        selectCustomer(null);
+    public void refreshCustomerList() {
+        // Không cần load toàn bộ vào combobox nữa
+    }
 
-        taYeuCauKhach.setText("");
-        taTinhTrangBanDau.setText("");
-        txtOdo.setText("0");
-        cboFuel.setSelectedIndex(2); // Mặc định 1/2 bình
-        txtThoiGianTiepNhan.setText(LocalDateTime.now().format(INPUT_DT_FMT));
-        txtThoiGianHenTra.setText(LocalDateTime.now().plusHours(8).format(INPUT_DT_FMT));
-
-        User u = Session.user();
-        if (u != null) {
-            txtNhanVien.setText(String.format("%s · %s", u.maNV(), u.hoTen()));
-        } else {
-            txtNhanVien.setText("NV26002 · Trần Thị Bình");
+    public void setInitialCustomerAndVehicle(KhachHang kh, Xe xe) {
+        if (kh != null) {
+            selectCustomer(kh);
         }
-
-        chkConditionRecorded.setSelected(true);
-        chkRequestConfirmed.setSelected(true);
-
-        lblSumThoiGian.setText(LocalDateTime.now().format(DT_FMT));
-    }
-
-    // Helper UI Builders
-    private JPanel formFieldWrapComponent(String label, JComponent comp) {
-        JPanel p = new JPanel();
-        p.setOpaque(false);
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-
-        JLabel l = new JLabel(label);
-        l.setFont(Theme.font(Font.BOLD, 12));
-        l.setForeground(Theme.TEXT);
-        l.setAlignmentX(LEFT_ALIGNMENT);
-        p.add(l);
-        p.add(Box.createVerticalStrut(6));
-
-        comp.setAlignmentX(LEFT_ALIGNMENT);
-        p.add(comp);
-        return p;
-    }
-
-    private JPanel formFieldWrap(String label, JComponent comp, String hint) {
-        JPanel p = new JPanel();
-        p.setOpaque(false);
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-
-        JLabel l = new JLabel(label);
-        l.setFont(Theme.font(Font.BOLD, 12));
-        l.setForeground(Theme.TEXT);
-        l.setAlignmentX(LEFT_ALIGNMENT);
-        p.add(l);
-        p.add(Box.createVerticalStrut(6));
-
-        styleInput(comp);
-        comp.setAlignmentX(LEFT_ALIGNMENT);
-        p.add(comp);
-
-        if (hint != null && !hint.isEmpty()) {
-            p.add(Box.createVerticalStrut(4));
-            JLabel h = UI.muted(hint);
-            h.setFont(Theme.font(Font.PLAIN, 11));
-            h.setAlignmentX(LEFT_ALIGNMENT);
-            p.add(h);
+        if (xe != null) {
+            selectVehicle(xe);
         }
-        return p;
     }
 
-    private JPanel formFieldWrapWithCustomHint(String label, JComponent comp, JLabel hintLabel) {
-        JPanel p = new JPanel();
-        p.setOpaque(false);
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-
-        JLabel l = new JLabel(label);
-        l.setFont(Theme.font(Font.BOLD, 12));
-        l.setForeground(Theme.TEXT);
-        l.setAlignmentX(LEFT_ALIGNMENT);
-        p.add(l);
-        p.add(Box.createVerticalStrut(6));
-
-        styleInput(comp);
-        comp.setAlignmentX(LEFT_ALIGNMENT);
-        p.add(comp);
-
-        p.add(Box.createVerticalStrut(4));
-        hintLabel.setFont(Theme.font(Font.PLAIN, 11));
-        hintLabel.setAlignmentX(LEFT_ALIGNMENT);
-        p.add(hintLabel);
-
-        return p;
-    }
-
-    /**
-     * Khung nhập Text Area có viền chuẩn FlatLaf, hỗ trợ cuộn không giới hạn ký tự.
-     */
-    private JPanel formScrollableTextArea(String label, JTextArea ta) {
-        JPanel p = new JPanel();
-        p.setOpaque(false);
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-
-        JLabel l = new JLabel(label);
-        l.setFont(Theme.font(Font.BOLD, 12));
-        l.setForeground(Theme.TEXT);
-        l.setAlignmentX(LEFT_ALIGNMENT);
-        p.add(l);
-        p.add(Box.createVerticalStrut(6));
-
-        ta.setFont(Theme.font(Font.PLAIN, 13));
-        ta.setLineWrap(true);
-        ta.setWrapStyleWord(true);
-        ta.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
-
-        JScrollPane sp = new JScrollPane(ta);
-        sp.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        sp.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        sp.setBorder(BorderFactory.createLineBorder(new Color(0xD5, 0xDB, 0xE5), 1));
-        sp.setPreferredSize(new Dimension(200, 80));
-        sp.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
-        sp.setAlignmentX(LEFT_ALIGNMENT);
-        p.add(sp);
-
-        return p;
-    }
-
-    private JPanel buildSummaryItem(String label, JLabel valLabel) {
-        JPanel p = new JPanel(new BorderLayout(10, 0));
-        p.setOpaque(false);
-        JLabel l = UI.muted(label);
-        l.setPreferredSize(new Dimension(85, 18));
-        p.add(l, BorderLayout.WEST);
-
-        valLabel.setFont(Theme.font(Font.BOLD, 12));
-        valLabel.setForeground(Theme.TEXT);
-        p.add(valLabel, BorderLayout.CENTER);
-        p.setAlignmentX(LEFT_ALIGNMENT);
-        return p;
-    }
-
-    private void styleInput(JComponent c) {
-        c.setFont(Theme.font(Font.PLAIN, 13));
-        if (c instanceof JTextField) {
-            c.putClientProperty(FlatClientProperties.STYLE, "arc:10; margin:6,10,6,10; borderColor:#D5DBE5");
-        } else {
-            c.putClientProperty(FlatClientProperties.STYLE, "arc:10; borderColor:#D5DBE5");
-        }
-        c.setPreferredSize(new Dimension(200, 38));
-        c.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-    }
-
-    private void styleCheckbox(JCheckBox chk) {
-        chk.setOpaque(false);
-        chk.setFont(Theme.font(Font.PLAIN, 13));
-        chk.setForeground(Theme.TEXT);
-        chk.setSelected(true);
-        chk.setAlignmentX(LEFT_ALIGNMENT);
-    }
-
-    /**
-     * Hộp thoại Tra cứu khách hàng & danh sách xe trực quan.
-     * Cho phép nhân viên lọc nhanh theo tên, SĐT, biển số xe và bấm chọn nạp vào phiếu.
-     */
+    // =========================================================================
+    // HỘP THOẠI TRA CỨU KHÁCH HÀNG (Khôi phục chuẩn 100% giao diện gốc)
+    // =========================================================================
     public static final class TraCuuKhachHangDialog extends JDialog {
 
         private final JTextField txtFilter = new JTextField();
@@ -775,7 +804,7 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
         private final JLabel lblCount = UI.muted("0 khách hàng");
 
         private final JButton btnSelect = UI.primaryButton("Chọn khách hàng");
-        private final JButton btnAddNew = UI.secondaryButton("+ Thêm khách mới");
+        private final JButton btnAddNew = UI.secondaryButton("Thêm khách mới");
         private final JButton btnCancel = UI.secondaryButton("Đóng");
 
         private final Consumer<String> onAddNewCallback;
@@ -813,16 +842,14 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
             pTop.setLayout(new BorderLayout(12, 0));
             pTop.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
 
-            JLabel lblSearchIcon = new JLabel("🔍 Tìm kiếm:");
-            lblSearchIcon.setFont(Theme.font(Font.BOLD, 12));
-            lblSearchIcon.setForeground(Theme.TEXT);
-            pTop.add(lblSearchIcon, BorderLayout.WEST);
-
+            JLabel lblSearch = UI.label("Tìm kiếm:", Font.BOLD, 12, Theme.TEXT);
             txtFilter.setFont(Theme.font(Font.PLAIN, 13));
             txtFilter.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Gõ số điện thoại, tên khách hàng hoặc biển số xe để lọc tức thì...");
             txtFilter.putClientProperty(FlatClientProperties.STYLE, "arc:10; margin:6,10,6,10; borderColor:#D5DBE5");
-            pTop.add(txtFilter, BorderLayout.CENTER);
+            txtFilter.setPreferredSize(new Dimension(0, 38));
 
+            pTop.add(lblSearch, BorderLayout.WEST);
+            pTop.add(txtFilter, BorderLayout.CENTER);
             root.add(pTop, BorderLayout.NORTH);
 
             // 2. Table Center
@@ -854,14 +881,12 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
             JScrollPane sp = new JScrollPane(table);
             sp.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 0, Theme.BORDER));
             pTable.add(sp, BorderLayout.CENTER);
-
             pTable.add(lblCount, BorderLayout.SOUTH);
             root.add(pTable, BorderLayout.CENTER);
 
             // 3. Bottom Actions
             JPanel pBot = new JPanel(new BorderLayout());
             pBot.setOpaque(false);
-
             pBot.add(btnAddNew, BorderLayout.WEST);
 
             JPanel pRightBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -872,36 +897,8 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
 
             root.add(pBot, BorderLayout.SOUTH);
 
+            // Đưa toàn bộ panel root vào dialog
             add(root, BorderLayout.CENTER);
-        }
-
-        private void initEvents() {
-            btnCancel.addActionListener(e -> dispose());
-
-            btnSelect.addActionListener(e -> handleSelectRow());
-
-            btnAddNew.addActionListener(e -> {
-                String q = txtFilter.getText().trim();
-                dispose();
-                if (onAddNewCallback != null) {
-                    onAddNewCallback.accept(q);
-                }
-            });
-
-            table.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    if (e.getClickCount() == 2) {
-                        handleSelectRow();
-                    }
-                }
-            });
-
-            txtFilter.getDocument().addDocumentListener(new DocumentListener() {
-                @Override public void insertUpdate(DocumentEvent e) { doSearch(); }
-                @Override public void removeUpdate(DocumentEvent e) { doSearch(); }
-                @Override public void changedUpdate(DocumentEvent e) { doSearch(); }
-            });
         }
 
         private void doSearch() {
@@ -928,10 +925,13 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
                 });
             }
 
-            lblCount.setText(String.format("Hiển thị %d khách hàng phù hợp", currentList.size()));
+            lblCount.setText(String.format("Tìm thấy %d khách hàng phù hợp", currentList.size()));
 
             if (!currentList.isEmpty()) {
                 table.setRowSelectionInterval(0, 0);
+                btnSelect.setEnabled(true);
+            } else {
+                btnSelect.setEnabled(false);
             }
         }
 
@@ -946,5 +946,75 @@ public final class LapPhieuTiepNhanPanel extends JPanel {
         public KhachHang getSelectedCustomer() {
             return selectedCustomer;
         }
+
+        // =========================================================================
+        // ĐEM TOÀN BỘ CÁC LUỒNG GỌI XỬ LÝ SỰ KIỆN XUỐNG CUỐI CÙNG
+        // =========================================================================
+        private void initEvents() {
+            btnCancel.addActionListener(e -> dispose());
+
+            btnSelect.addActionListener(e -> handleSelectRow());
+
+            btnAddNew.addActionListener(e -> {
+                String q = txtFilter.getText().trim();
+                dispose();
+                if (onAddNewCallback != null) {
+                    onAddNewCallback.accept(q);
+                }
+            });
+
+            table.getSelectionModel().addListSelectionListener(e -> {
+                btnSelect.setEnabled(table.getSelectedRow() >= 0);
+            });
+
+            table.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getClickCount() == 2 && table.getSelectedRow() >= 0) {
+                        handleSelectRow();
+                    }
+                }
+            });
+
+            txtFilter.getDocument().addDocumentListener(new DocumentListener() {
+                @Override public void insertUpdate(DocumentEvent e) { doSearch(); }
+                @Override public void removeUpdate(DocumentEvent e) { doSearch(); }
+                @Override public void changedUpdate(DocumentEvent e) { doSearch(); }
+            });
+        }
+    }
+
+    // =========================================================================
+    // ĐEM TOÀN BỘ CÁC LUỒNG GỌI XỬ LÝ SỰ KIỆN XUỐNG CUỐI CÙNG
+    // =========================================================================
+    private void initEvents() {
+        // 1. Nút Tra cứu khách hàng
+        btnBrowseCust.addActionListener(e -> handleOpenBrowseDialog());
+
+        // 2. Chọn xe trên ComboBox
+        cboVehicle.addActionListener(e -> {
+            if (isUpdatingVehicleCombo) return;
+            int idx = cboVehicle.getSelectedIndex();
+            if (selectedCustomer != null && idx > 0) {
+                List<Xe> vehicles = KhachHangXeBus.getDanhSachXe(selectedCustomer.getMaKH());
+                if (idx - 1 < vehicles.size()) {
+                    selectVehicle(vehicles.get(idx - 1));
+                }
+            } else if (idx == 0) {
+                selectVehicle(null);
+            }
+        });
+
+        // 3. Nút Thêm dịch vụ
+        btnThemDV.addActionListener(e -> themDichVu());
+
+        // 4. Nút Bỏ dịch vụ
+        btnBoDV.addActionListener(e -> boDichVu());
+
+        // 5. Nút Tạo phiếu tiếp nhận - sửa chữa
+        btnConfirm.addActionListener(e -> handleConfirmReception());
+
+        // 6. Nút Làm mới form
+        btnReset.addActionListener(e -> resetForm());
     }
 }

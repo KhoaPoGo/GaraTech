@@ -44,6 +44,7 @@ public final class IdGenerator {
         NHA_CUNG_CAP("NhaCungCap", "maNCC", 3, d -> "NCC"),
         PHIEU_TIEP_NHAN("PhieuTiepNhan", "maPhieuTN", 3, d -> "PTN-" + d.format(YYYYMMDD) + "-"),
         PHIEU_SUA_CHUA("PhieuSuaChua", "maPhieuSC", 3, d -> "PSC-" + d.format(YYYYMMDD) + "-"),
+        PHIEU_TIEP_NHAN_SUA_CHUA("PhieuTiepNhanSuaChua", "maPhieu", 3, d -> "PSC-" + d.format(YYYYMMDD) + "-"),
         HANG_MUC("HangMucSuaChua", "maHangMuc", 4, d -> "HM"),
         PHIEU_NHAP_KHO("PhieuNhapKho", "maPhieuNhap", 3, d -> "PNK-" + d.format(YYYYMMDD) + "-"),
         PHIEU_XUAT_KHO("PhieuXuatKho", "maPhieuXK", 3, d -> "PXK-" + d.format(YYYYMMDD) + "-"),

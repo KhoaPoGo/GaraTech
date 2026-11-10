@@ -11,7 +11,6 @@ import gui.panel.DieuPhoiPanel;
 import gui.panel.KiemTraChatLuongPanel;
 import gui.panel.KhachHangXePanel;
 import gui.panel.PlaceholderPanel;
-import gui.panel.phieusuachua.PhieuSuaChuaPanel;
 import gui.panel.PhuTungTonKhoPanel;
 import gui.panel.NhapKhoPanel;
 import gui.panel.XuatKhoPanel;
@@ -30,11 +29,6 @@ import static enums.Role.TIEP_NHAN;
 
 /**
  * DANH SÁCH MÀN HÌNH + AI ĐƯỢC VÀO + AI PHỤ TRÁCH. Thứ tự khai báo = thứ tự hiện trong sidebar.
- *
- * Khi làm xong một màn hình, chỉ cần thay tham số cuối (null) bằng constructor của panel, ví dụ:
- *   KHACH_HANG_XE(..., KhachHangXePanel::new)
- * null nghĩa là màn hình chưa làm, hệ thống tự hiện trang giữ chỗ kèm yêu cầu cần làm.
- * Mỗi người chỉ sửa đúng dòng của mình để tránh xung đột khi merge.
  */
 public enum Screen {
     // ---- Quản lý (SV1) ----
@@ -61,12 +55,9 @@ public enum Screen {
     KHACH_HANG_XE("Khách hàng & xe", "SV2", EnumSet.of(QUAN_LY, TIEP_NHAN, KY_THUAT_VIEN),
             "Danh sách + chi tiết + lịch sử sửa chữa; popup thêm khách; SĐT 10 số bắt đầu 0; chặn trùng biển số; không xóa nếu đã có chứng từ. KTV chỉ xem.",
             KhachHangXePanel::new),
-    TIEP_NHAN_XE("Tiếp nhận xe", "SV2", EnumSet.of(TIEP_NHAN),
-            "Chọn khách/xe, số km, mức nhiên liệu, ghi vết xước (bắt buộc); hẹn trả ≥ thời gian tiếp nhận; mã PTN-YYYYMMDD-STT.",
+    TIEP_NHAN_XE("Quản lý phiếu Tiếp nhận - Sửa chữa", "SV2", EnumSet.of(TIEP_NHAN),
+            "Quản lý vòng đời phiếu Tiếp nhận - Sửa chữa thống nhất; chọn khách/xe, phân công KTV, dịch vụ đề nghị, theo dõi 4 trạng thái.",
             TiepNhanXePanel::new),
-    PHIEU_SUA_CHUA("Lập phiếu sửa chữa", "SV2", EnumSet.of(TIEP_NHAN),
-            "Bảng hạng mục (dịch vụ HOẶC phụ tùng); báo giá; Chờ duyệt / Đã xác nhận / Từ chối; checklist phê duyệt; hủy phiếu có lý do.",
-            PhieuSuaChuaPanel::new),
     HOA_DON("Hóa đơn", "SV4", EnumSet.of(TIEP_NHAN),
             "Chỉ lập khi phiếu Hoàn thành; tiền công + phụ tùng − giảm giá + VAT 10%; lịch sử thanh toán nhiều lần; in hóa đơn.",
             null),

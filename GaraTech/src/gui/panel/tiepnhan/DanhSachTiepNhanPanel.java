@@ -1,10 +1,12 @@
 package gui.panel.tiepnhan;
 
-import bus.TiepNhanXeBus;
 import com.formdev.flatlaf.FlatClientProperties;
-import dao.PhieuTiepNhanDao.PhieuTiepNhanRow;
+import dao.PhieuTiepNhanSuaChuaDao;
+import dao.PhieuTiepNhanSuaChuaDao.PhieuTiepNhanSuaChuaRow;
+import enums.TrangThaiPhieu;
 import gui.component.Theme;
 import gui.component.UI;
+import util.Fmt;
 import util.RoundedPanel;
 
 import javax.swing.BorderFactory;
@@ -24,12 +26,10 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.LocalDate;
@@ -39,8 +39,9 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Màn hình Danh sách phiếu tiếp nhận (Figma Frame 9:9).
- * Hỗ trợ bộ lọc khoảng ngày, tìm kiếm theo từ khóa/trạng thái và xem chi tiết phiếu.
+ * Màn hình Danh sách phiếu tiếp nhận - sửa chữa.
+ * Hỗ trợ bộ lọc gọn gàng (khoảng ngày, từ khóa, trạng thái) và xem chi tiết phiếu.
+ * Áp dụng 4 trạng thái chuẩn: Chờ sửa chữa, Đang sửa chữa, Chờ linh kiện, Hoàn tất.
  */
 public final class DanhSachTiepNhanPanel extends JPanel {
 
@@ -48,7 +49,8 @@ public final class DanhSachTiepNhanPanel extends JPanel {
     private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("dd/MM · HH:mm");
 
     private final Runnable onCreateNewCallback;
-    private final Consumer<PhieuTiepNhanRow> onViewDetailCallback;
+    private final Consumer<PhieuTiepNhanSuaChuaRow> onViewDetailCallback;
+    private final PhieuTiepNhanSuaChuaDao phieuDao = new PhieuTiepNhanSuaChuaDao();
 
     // Filters
     private final JTextField txtFromDate = new JTextField(LocalDate.now().minusDays(30).format(DMY));
@@ -56,28 +58,29 @@ public final class DanhSachTiepNhanPanel extends JPanel {
     private final JTextField txtKeyword = new JTextField();
     private final JComboBox<String> cboStatus = new JComboBox<>(new String[]{
             "Tất cả trạng thái",
-            "Chờ khách hàng xác nhận",
-            "Đã xác nhận",
-            "Đã hủy"
+            "Chờ sửa chữa (CHO_SUA)",
+            "Đang sửa chữa (DANG_SUA)",
+            "Chờ linh kiện (CHO_LINH_KIEN)",
+            "Hoàn tất (HOAN_TAT)"
     });
     private final JButton btnFilter = UI.primaryButton("Tìm kiếm");
     private final JButton btnResetFilter = UI.secondaryButton("Đặt lại");
 
     // Table
-    private final DefaultTableModel tableModel = UI.readOnlyModel("Mã phiếu", "Biển số / khách", "Tiếp nhận", "Trạng thái");
+    private final DefaultTableModel tableModel = UI.readOnlyModel(
+            "Mã phiếu", "Biển số / khách", "Kỹ thuật viên", "Tiếp nhận", "Tổng tiền", "Trạng thái"
+    );
     private final JTable table = UI.table(tableModel);
     private final JLabel lblPagingStatus = UI.muted("Trang 1 / 1 · Hiển thị 0 phiếu");
-    private final JButton btnViewDetail = UI.secondaryButton("Xem chi tiết phiếu");
-    private final JButton btnCreateNew = UI.primaryButton("+ Lập phiếu mới");
 
-    private List<PhieuTiepNhanRow> currentRows = new ArrayList<>();
+    private List<PhieuTiepNhanSuaChuaRow> currentRows = new ArrayList<>();
 
-    public DanhSachTiepNhanPanel(Runnable onCreateNewCallback, Consumer<PhieuTiepNhanRow> onViewDetailCallback) {
+    public DanhSachTiepNhanPanel(Runnable onCreateNewCallback, Consumer<PhieuTiepNhanSuaChuaRow> onViewDetailCallback) {
         this.onCreateNewCallback = onCreateNewCallback;
         this.onViewDetailCallback = onViewDetailCallback;
 
         setOpaque(false);
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        setLayout(new BorderLayout(0, 16));
 
         buildUI();
         initEvents();
@@ -85,64 +88,60 @@ public final class DanhSachTiepNhanPanel extends JPanel {
     }
 
     private void buildUI() {
-        // 1. Card Bộ lọc
-        RoundedPanel cardFilter = new RoundedPanel(16, Theme.CARD);
-        cardFilter.setLayout(new BorderLayout(0, 14));
-        cardFilter.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        // 1. Card Bộ lọc (Chiều cao gọn gàng ~90px, tự co giãn theo nội dung)
+        RoundedPanel cardFilter = new RoundedPanel(14, Theme.CARD);
+        cardFilter.setLayout(new BorderLayout(0, 10));
+        cardFilter.setBorder(BorderFactory.createEmptyBorder(12, 18, 12, 18));
 
         cardFilter.add(UI.h2("Bộ lọc tìm kiếm"), BorderLayout.NORTH);
 
-        JPanel pFilterRow = new JPanel(new GridLayout(1, 3, 20, 0));
+        JPanel pFilterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
         pFilterRow.setOpaque(false);
 
-        // Cột 1: Từ ngày - Đến ngày
-        JPanel pDates = new JPanel(new GridLayout(1, 2, 10, 0));
-        pDates.setOpaque(false);
-        pDates.add(formFieldWrap("Từ ngày", txtFromDate));
-        pDates.add(formFieldWrap("Đến ngày", txtToDate));
-        pFilterRow.add(pDates);
+        // Từ ngày / Đến ngày
+        pFilterRow.add(compactFieldWrap("Từ ngày", txtFromDate, 105));
+        pFilterRow.add(compactFieldWrap("Đến ngày", txtToDate, 105));
 
-        // Cột 2: Từ khóa
-        pFilterRow.add(formFieldWrap("Biển số / SĐT / Khách hàng / Mã PTN", txtKeyword));
+        // Từ khóa
+        txtKeyword.putClientProperty("JTextField.placeholderText", "Biển số, SĐT, khách hàng, mã...");
+        pFilterRow.add(compactFieldWrap("Từ khóa", txtKeyword, 230));
 
-        // Cột 3: Trạng thái & Nút tìm
-        JPanel pStatusAndBtn = new JPanel(new BorderLayout(10, 0));
-        pStatusAndBtn.setOpaque(false);
-        pStatusAndBtn.add(formFieldWrap("Trạng thái phiếu", cboStatus), BorderLayout.CENTER);
+        // Trạng thái
+        pFilterRow.add(compactFieldWrap("Trạng thái", cboStatus, 195));
 
-        JPanel pBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 22));
+        // Nút tìm kiếm & Đặt lại
+        JPanel pBtns = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         pBtns.setOpaque(false);
+        btnFilter.setPreferredSize(new Dimension(105, 36));
+        btnResetFilter.setPreferredSize(new Dimension(85, 36));
         pBtns.add(btnFilter);
         pBtns.add(btnResetFilter);
-        pStatusAndBtn.add(pBtns, BorderLayout.EAST);
-
-        pFilterRow.add(pStatusAndBtn);
+        pFilterRow.add(compactFieldWrap(" ", pBtns, 205));
 
         cardFilter.add(pFilterRow, BorderLayout.CENTER);
-        cardFilter.setAlignmentX(LEFT_ALIGNMENT);
-        add(cardFilter);
-
-        add(Box.createVerticalStrut(18));
+        add(cardFilter, BorderLayout.NORTH);
 
         // 2. Card Danh sách phiếu
         RoundedPanel cardTable = new RoundedPanel(16, Theme.CARD);
         cardTable.setLayout(new BorderLayout(0, 14));
-        cardTable.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        cardTable.setBorder(BorderFactory.createEmptyBorder(18, 20, 18, 20));
 
-        cardTable.add(UI.h2("Danh sách phiếu tiếp nhận"), BorderLayout.NORTH);
+        cardTable.add(UI.h2("Danh sách phiếu tiếp nhận - sửa chữa"), BorderLayout.NORTH);
 
         // Setup Table
         table.setRowHeight(44);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.getColumnModel().getColumn(0).setPreferredWidth(160);
-        table.getColumnModel().getColumn(1).setPreferredWidth(320);
+        table.getColumnModel().getColumn(0).setPreferredWidth(150);
+        table.getColumnModel().getColumn(1).setPreferredWidth(260);
         table.getColumnModel().getColumn(2).setPreferredWidth(160);
-        table.getColumnModel().getColumn(3).setPreferredWidth(160);
+        table.getColumnModel().getColumn(3).setPreferredWidth(130);
+        table.getColumnModel().getColumn(4).setPreferredWidth(130);
+        table.getColumnModel().getColumn(5).setPreferredWidth(160);
 
         DefaultTableCellRenderer cellR = new DefaultTableCellRenderer();
         cellR.setHorizontalAlignment(SwingConstants.LEFT);
         cellR.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 6; i++) {
             table.getColumnModel().getColumn(i).setCellRenderer(cellR);
         }
 
@@ -152,64 +151,56 @@ public final class DanhSachTiepNhanPanel extends JPanel {
             headR.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 12));
         }
 
-        JScrollPane sp = new JScrollPane(table);
-        sp.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 0, Theme.BORDER));
-        sp.setPreferredSize(new Dimension(800, 360));
-        cardTable.add(sp, BorderLayout.CENTER);
+        table.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Footer table: Phân trang + Action buttons
-        JPanel footer = new JPanel(new BorderLayout());
-        footer.setOpaque(false);
-        footer.add(lblPagingStatus, BorderLayout.WEST);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBorder(BorderFactory.createLineBorder(Theme.BORDER, 1));
+        cardTable.add(scroll, BorderLayout.CENTER);
 
-        JPanel botActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        botActions.setOpaque(false);
-        botActions.add(btnCreateNew);
-        botActions.add(btnViewDetail);
-        footer.add(botActions, BorderLayout.EAST);
+        // Footer Card: Chỉ hiển thị số lượng / phân trang
+        JPanel pFooter = new JPanel(new BorderLayout());
+        pFooter.setOpaque(false);
+        pFooter.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        pFooter.add(lblPagingStatus, BorderLayout.WEST);
 
-        cardTable.add(footer, BorderLayout.SOUTH);
-        cardTable.setAlignmentX(LEFT_ALIGNMENT);
-        add(cardTable);
+        cardTable.add(pFooter, BorderLayout.SOUTH);
+        add(cardTable, BorderLayout.CENTER);
     }
 
-    private void initEvents() {
-        btnFilter.addActionListener(e -> loadData());
+    private JPanel compactFieldWrap(String label, JComponent comp, int width) {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
 
-        btnResetFilter.addActionListener(e -> {
-            txtFromDate.setText(LocalDate.now().minusDays(30).format(DMY));
-            txtToDate.setText(LocalDate.now().format(DMY));
-            txtKeyword.setText("");
-            cboStatus.setSelectedIndex(0);
-            loadData();
-        });
+        JLabel l = new JLabel(label);
+        l.setFont(Theme.font(Font.BOLD, 12));
+        l.setForeground(Theme.TEXT);
+        l.setAlignmentX(LEFT_ALIGNMENT);
+        p.add(l);
+        p.add(Box.createVerticalStrut(4));
 
-        btnCreateNew.addActionListener(e -> {
-            if (onCreateNewCallback != null) {
-                onCreateNewCallback.run();
-            }
-        });
+        comp.setFont(Theme.font(Font.PLAIN, 13));
+        if (comp instanceof JTextField) {
+            comp.putClientProperty(FlatClientProperties.STYLE, "arc:10; margin:4,8,4,8; borderColor:#D5DBE5");
+        } else if (comp instanceof JComboBox) {
+            comp.putClientProperty(FlatClientProperties.STYLE, "arc:10; borderColor:#D5DBE5");
+        }
+        comp.setPreferredSize(new Dimension(width, 36));
+        comp.setMaximumSize(new Dimension(width, 36));
+        comp.setAlignmentX(LEFT_ALIGNMENT);
+        p.add(comp);
 
-        btnViewDetail.addActionListener(e -> handleViewSelectedDetail());
-
-        table.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    handleViewSelectedDetail();
-                }
-            }
-        });
+        return p;
     }
 
-    private void handleViewSelectedDetail() {
+    public void handleViewSelectedDetail() {
         int row = table.getSelectedRow();
         if (row >= 0 && row < currentRows.size()) {
             if (onViewDetailCallback != null) {
                 onViewDetailCallback.accept(currentRows.get(row));
             }
         } else {
-            gui.component.Msg.error(this, "Vui lòng chọn một phiếu tiếp nhận từ bảng để xem chi tiết.");
+            gui.component.Msg.error(this, "Vui lòng chọn một phiếu từ bảng để xem chi tiết.");
         }
     }
 
@@ -227,29 +218,43 @@ public final class DanhSachTiepNhanPanel extends JPanel {
         } catch (Exception ignored) {}
 
         String kw = txtKeyword.getText().trim();
-        String st = cboStatus.getSelectedItem() != null ? cboStatus.getSelectedItem().toString() : "";
-        if (st.startsWith("Tất cả")) st = null;
 
-        currentRows = TiepNhanXeBus.traCuuDanhSach(fromDate, toDate, kw, st);
+        TrangThaiPhieu tt = null;
+        int selIdx = cboStatus.getSelectedIndex();
+        if (selIdx == 1) tt = TrangThaiPhieu.CHO_SUA;
+        else if (selIdx == 2) tt = TrangThaiPhieu.DANG_SUA;
+        else if (selIdx == 3) tt = TrangThaiPhieu.CHO_LINH_KIEN;
+        else if (selIdx == 4) tt = TrangThaiPhieu.HOAN_TAT;
+
+        try {
+            currentRows = phieuDao.layDanhSachChoTiepNhanVien(kw, tt, fromDate, toDate);
+        } catch (Exception e) {
+            e.printStackTrace();
+            currentRows = new ArrayList<>();
+        }
+
         tableModel.setRowCount(0);
 
-        for (PhieuTiepNhanRow r : currentRows) {
-            String maHtml = "<html><span style='color:#24508F; font-weight:bold'>" + r.maPhieuTN() + " ↗</span></html>";
+        for (PhieuTiepNhanSuaChuaRow r : currentRows) {
+            String maHtml = "<html><span style='color:#24508F; font-weight:bold'>" + r.maPhieu() + "</span></html>";
             String custVeh = String.format("<html><b>%s</b> · <span style='color:#6B7A90'>%s</span></html>",
-                    r.bienSo(), r.tenKhachHang());
-            String timeStr = r.thoiGianTiepNhan() != null ? r.thoiGianTiepNhan().format(DATE_TIME_FMT) : "---";
-
+                    r.bienSo(), r.tenKH() != null ? r.tenKH() : "---");
+            String ktvStr = r.tenNVKyThuat() != null ? r.tenNVKyThuat() : "<html><i style='color:#94A3B8'>Chưa phân công</i></html>";
+            String timeStr = r.ngayGioTiepNhan() != null ? r.ngayGioTiepNhan().format(DATE_TIME_FMT) : "---";
+            String tienStr = Fmt.money(r.tongChiPhi());
             String statusHtml = formatStatusBadge(r.trangThai());
 
             tableModel.addRow(new Object[]{
                     maHtml,
                     custVeh,
+                    ktvStr,
                     timeStr,
+                    tienStr,
                     statusHtml
             });
         }
 
-        lblPagingStatus.setText(String.format("Trang 1 / 1 · Hiển thị %d phiếu tiếp nhận", currentRows.size()));
+        lblPagingStatus.setText(String.format("Trang 1 / 1 · Hiển thị %d phiếu", currentRows.size()));
 
         if (!currentRows.isEmpty()) {
             table.setRowSelectionInterval(0, 0);
@@ -257,38 +262,45 @@ public final class DanhSachTiepNhanPanel extends JPanel {
     }
 
     private String formatStatusBadge(String status) {
-        if (status == null) status = "Chờ khách hàng xác nhận";
-        String color = switch (status) {
-            case "Đã xác nhận" -> "#027A48";
-            case "Đã hủy" -> "#B42318";
-            default -> "#B45309"; // Chờ khách hàng xác nhận
+        TrangThaiPhieu tt = TrangThaiPhieu.fromDb(status);
+        String color = switch (tt) {
+            case CHO_SUA -> "#B45309";       // Cam đậm / Amber
+            case DANG_SUA -> "#175CD3";      // Lam / Blue
+            case CHO_LINH_KIEN -> "#7A5AF8"; // Tím / Purple
+            case HOAN_TAT -> "#027A48";      // Xanh lá / Green
         };
-        return "<html><span style='color:" + color + "; font-weight:bold'>" + status + "</span></html>";
+        return "<html><span style='color:" + color + "; font-weight:bold'>" + tt.label() + "</span></html>";
     }
 
-    private JPanel formFieldWrap(String label, JComponent comp) {
-        JPanel p = new JPanel();
-        p.setOpaque(false);
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+    // =========================================================================
+    // ĐEM TOÀN BỘ CÁC LUỒNG GỌI XỬ LÝ SỰ KIỆN XUỐNG CUỐI CÙNG
+    // =========================================================================
+    private void initEvents() {
+        btnFilter.addActionListener(e -> loadData());
 
-        JLabel l = new JLabel(label);
-        l.setFont(Theme.font(Font.BOLD, 12));
-        l.setForeground(Theme.TEXT);
-        l.setAlignmentX(LEFT_ALIGNMENT);
-        p.add(l);
-        p.add(Box.createVerticalStrut(6));
+        btnResetFilter.addActionListener(e -> {
+            txtFromDate.setText(LocalDate.now().minusDays(30).format(DMY));
+            txtToDate.setText(LocalDate.now().format(DMY));
+            txtKeyword.setText("");
+            cboStatus.setSelectedIndex(0);
+            loadData();
+        });
 
-        comp.setFont(Theme.font(Font.PLAIN, 13));
-        if (comp instanceof JTextField) {
-            comp.putClientProperty(FlatClientProperties.STYLE, "arc:10; margin:6,10,6,10; borderColor:#D5DBE5");
-        } else {
-            comp.putClientProperty(FlatClientProperties.STYLE, "arc:10; borderColor:#D5DBE5");
-        }
-        comp.setPreferredSize(new Dimension(150, 38));
-        comp.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        comp.setAlignmentX(LEFT_ALIGNMENT);
-        p.add(comp);
+        txtKeyword.addActionListener(e -> loadData());
 
-        return p;
+        cboStatus.addActionListener(e -> {
+            if (isShowing()) {
+                loadData();
+            }
+        });
+
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    handleViewSelectedDetail();
+                }
+            }
+        });
     }
 }

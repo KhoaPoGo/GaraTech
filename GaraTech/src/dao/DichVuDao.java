@@ -36,6 +36,12 @@ public class DichVuDao {
 
     public List<DichVu> findAll() throws SQLException { return query(""); }
 
+    public DichVu findById(String maDichVu) throws SQLException {
+        if (maDichVu == null || maDichVu.isBlank()) return null;
+        List<DichVu> list = query("WHERE maDichVu = '" + maDichVu.trim() + "'");
+        return list.isEmpty() ? null : list.get(0);
+    }
+
     /** Chỉ các dịch vụ đang cung cấp (dùng khi chọn dịch vụ cho phiếu sửa chữa). */
     public List<DichVu> findActive() throws SQLException { return query("WHERE trangThai = N'Hoạt động'"); }
 

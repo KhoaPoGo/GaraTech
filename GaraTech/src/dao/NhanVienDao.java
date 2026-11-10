@@ -31,6 +31,17 @@ public class NhanVienDao {
         return out;
     }
 
+    public List<NhanVien> findKyThuatVien() throws SQLException {
+        List<NhanVien> out = new ArrayList<>();
+        String sql = "SELECT " + COLS + " FROM NhanVien WHERE vaiTro = N'Kỹ thuật viên' AND dangLam = 1 ORDER BY hoTen";
+        try (Connection c = ConnectDB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) out.add(map(rs));
+        }
+        return out;
+    }
+
     public NhanVien findById(String maNV) throws SQLException {
         try (Connection c = ConnectDB.getConnection();
              PreparedStatement ps = c.prepareStatement("SELECT " + COLS + " FROM NhanVien WHERE maNV = ?")) {
