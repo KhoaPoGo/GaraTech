@@ -50,4 +50,68 @@ public final class Fmt {
             case SUNDAY -> "Chủ Nhật";
         };
     }
+
+    /** Đọc số tiền bằng chữ tiếng Việt (VD: 1.144.000 -> "Một triệu một trăm bốn mươi bốn nghìn đồng chẵn.") */
+    public static String moneyInWords(long amount) {
+        if (amount == 0) return "Không đồng";
+        if (amount < 0) return "Âm " + moneyInWords(-amount);
+
+        final String[] chuSo = {"không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"};
+        final String[] donVi = {"", "nghìn", "triệu", "tỷ", "nghìn tỷ", "triệu tỷ"};
+
+        long temp = amount;
+        java.util.List<Integer> blocks = new java.util.ArrayList<>();
+        while (temp > 0) {
+            blocks.add((int) (temp % 1000));
+            temp /= 1000;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = blocks.size() - 1; i >= 0; i--) {
+            int b = blocks.get(i);
+            if (b == 0) continue;
+
+            int tram = b / 100;
+            int chuc = (b % 100) / 10;
+            int donViNum = b % 10;
+
+            StringBuilder bText = new StringBuilder();
+            if (tram > 0 || (i < blocks.size() - 1 && (chuc > 0 || donViNum > 0))) {
+                bText.append(chuSo[tram]).append(" trăm ");
+            }
+
+            if (chuc > 1) {
+                bText.append(chuSo[chuc]).append(" mươi ");
+                if (donViNum == 1) {
+                    bText.append("mốt ");
+                } else if (donViNum == 4) {
+                    bText.append("tư ");
+                } else if (donViNum == 5) {
+                    bText.append("lăm ");
+                } else if (donViNum > 0) {
+                    bText.append(chuSo[donViNum]).append(" ");
+                }
+            } else if (chuc == 1) {
+                bText.append("mười ");
+                if (donViNum == 5) {
+                    bText.append("lăm ");
+                } else if (donViNum > 0) {
+                    bText.append(chuSo[donViNum]).append(" ");
+                }
+            } else if (chuc == 0 && donViNum > 0) {
+                if (tram > 0 || i < blocks.size() - 1) {
+                    bText.append("lẻ ");
+                }
+                bText.append(chuSo[donViNum]).append(" ");
+            }
+
+            if (!bText.isEmpty()) {
+                sb.append(bText.toString().trim()).append(" ").append(donVi[i]).append(" ");
+            }
+        }
+
+        String res = sb.toString().trim().replaceAll("\\s+", " ");
+        if (res.isEmpty()) return "Không đồng";
+        return Character.toUpperCase(res.charAt(0)) + res.substring(1) + " đồng chẵn.";
+    }
 }

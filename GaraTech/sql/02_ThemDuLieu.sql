@@ -152,15 +152,21 @@ INSERT INTO ChiTietDichVu(maPhieu, maDichVu, soLuong, donGiaThucHien, ghiChu) VA
  ('PSC-20261110-003', 'DV0005', 1, 300000, N'Cân bằng động 4 bánh');
 GO
 
--- 8. HÓA ĐƠN & GIAO DỊCH CHO PHIẾU HOÀN TẤT
+-- 8. KHUYẾN MÃI, HÓA ĐƠN & THANH TOÁN
+INSERT INTO KhuyenMai (maKM, maNV, tenChuongTrinh, mucGiamPhanTram, ngayBatDau, ngayKetThuc, ghiChu) VALUES
+ ('KM001', 'NV26002', N'Ưu đãi bảo dưỡng định kỳ', 10.0, '2026-10-01', '2026-12-31', N'Giảm 10% toàn bộ dịch vụ và linh kiện'),
+ ('KM002', 'NV26002', N'Khuyến mãi thay nhớt & lọc dầu', 15.0, '2026-10-15', '2026-11-30', N'Giảm 15% cho phụ tùng nhớt và lọc'),
+ ('KM003', 'NV26002', N'Tri ân khách hàng thân thiết', 5.0, '2026-09-01', '2026-12-31', N'Giảm 5% trên tổng hóa đơn thanh toán');
+GO
+
 INSERT INTO HoaDon (
-    maHoaDon, maPhieu, maNV, ngayLap,
+    maHoaDon, maPhieu, maNV, maKM, ngayLap,
     tongTienDichVu, tongTienPhuTung, chiPhiKhac, giamGia, thueVAT,
-    tongTienThanhToan, trangThai
+    tongTienThanhToan, phuongThuc, maGiaoDich, trangThai
 ) VALUES (
-    'HD20261108-0001', 'PSC-20261108-001', 'NV26002', '2026-11-08 11:15:00',
+    'HD20261108-0001', 'PSC-20261108-001', 'NV26002', NULL, '2026-11-08 11:15:00',
     400000, 640000, 0, 0, 10.00,
-    1144000, N'Đã thanh toán'
+    1144000, N'Chuyển khoản', 'VCB98234182', N'Đã thanh toán'
 );
 
 INSERT INTO ChiTietHoaDon(maChiTietHD, maHoaDon, loaiChiTiet, maDichVu, maPhuTung, tenChiTiet, soLuong, donGia, giamGia) VALUES

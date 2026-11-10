@@ -15,6 +15,7 @@ import gui.panel.PhuTungTonKhoPanel;
 import gui.panel.NhapKhoPanel;
 import gui.panel.XuatKhoPanel;
 import gui.panel.tiepnhan.DashboardTiepNhanPanel;
+import gui.panel.tiepnhan.HoaDonPanel;
 import gui.panel.tiepnhan.TiepNhanXePanel;
 
 import java.util.Arrays;
@@ -64,7 +65,7 @@ public enum Screen {
             TiepNhanXePanel::new),
     HOA_DON("Hóa đơn", "SV4", EnumSet.of(TIEP_NHAN),
             "Chỉ lập khi phiếu Hoàn thành; tiền công + phụ tùng − giảm giá + VAT 10%; lịch sử thanh toán nhiều lần; in hóa đơn.",
-            null),
+            HoaDonPanel::new),
     BAN_GIAO("Bàn giao xe", "SV4", EnumSet.of(TIEP_NHAN),
             "Chỉ cho 'Xác nhận đã bàn giao' khi hóa đơn thanh toán đủ; tick đã trả chìa khóa và giấy tờ.",
             null),

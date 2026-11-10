@@ -381,11 +381,26 @@ CREATE TABLE ChiTietXuatKho (
 );
 GO
 
+-- 11. KHUYẾN MÃI
+CREATE TABLE KhuyenMai (
+    maKM             VARCHAR(20)   NOT NULL PRIMARY KEY,
+    maNV             VARCHAR(10)   NULL REFERENCES NhanVien(maNV),
+    tenChuongTrinh   NVARCHAR(150) NOT NULL,
+    mucGiamPhanTram  DECIMAL(5,2)  NOT NULL DEFAULT 0,
+    ngayBatDau       DATE          NOT NULL,
+    ngayKetThuc      DATE          NOT NULL,
+    ghiChu           NVARCHAR(255) NULL,
+    CONSTRAINT CK_KM_tile CHECK (mucGiamPhanTram >= 0 AND mucGiamPhanTram <= 100),
+    CONSTRAINT CK_KM_ngay CHECK (ngayKetThuc >= ngayBatDau)
+);
+GO
+
 -- 12. HÓA ĐƠN & THANH TOÁN
 CREATE TABLE HoaDon (
     maHoaDon          VARCHAR(20)   NOT NULL PRIMARY KEY,
     maPhieu           VARCHAR(20)   NOT NULL UNIQUE REFERENCES PhieuTiepNhanSuaChua(maPhieu),
     maNV              VARCHAR(10)   NOT NULL REFERENCES NhanVien(maNV),
+    maKM              VARCHAR(20)   NULL REFERENCES KhuyenMai(maKM),
     ngayLap           DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
     tongTienDichVu    DECIMAL(18,0) NOT NULL DEFAULT 0,
     tongTienPhuTung   DECIMAL(18,0) NOT NULL DEFAULT 0,
@@ -393,11 +408,14 @@ CREATE TABLE HoaDon (
     giamGia           DECIMAL(18,0) NOT NULL DEFAULT 0,
     thueVAT           DECIMAL(5,2)  NOT NULL DEFAULT 10,
     tongTienThanhToan DECIMAL(18,0) NOT NULL DEFAULT 0,
+    phuongThuc        NVARCHAR(20)  NOT NULL DEFAULT N'Tiền mặt',
+    maGiaoDich        VARCHAR(50)   NULL,
     trangThai         NVARCHAR(30)  NOT NULL DEFAULT N'Chưa thanh toán',
     maPhieuSC         AS maPhieu,
     CONSTRAINT CK_HD_tien CHECK (tongTienDichVu>=0 AND tongTienPhuTung>=0 AND chiPhiKhac>=0 AND giamGia>=0 AND tongTienThanhToan>=0),
     CONSTRAINT CK_HD_vat  CHECK (thueVAT BETWEEN 0 AND 100),
     CONSTRAINT CK_HD_giam CHECK (giamGia <= tongTienDichVu + tongTienPhuTung + chiPhiKhac),
+    CONSTRAINT CK_HD_pt   CHECK (phuongThuc IN (N'Tiền mặt', N'Chuyển khoản')),
     CONSTRAINT CK_HD_tt   CHECK (trangThai IN (N'Chưa thanh toán', N'Đã thanh toán một phần', N'Đã thanh toán', N'Đã hủy'))
 );
 GO

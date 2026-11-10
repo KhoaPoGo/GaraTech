@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * Truy vấn dữ liệu thống kê tức thời cho Bảng điều hành Tiếp nhận viên (Dashboard Tiếp nhận).
- * Chuẩn hóa theo thiết kế CarZone:
+ * Chuẩn hóa thiết kế hiện đại:
  * - 4 chỉ số KPI tức thời (dạng số nguyên 0, 1, 2...).
  * - Tải công việc kỹ thuật viên (sắp xếp tăng dần từ bé đến lớn).
  * - Danh sách xe sẵn sàng bàn giao (HOAN_TAT).
