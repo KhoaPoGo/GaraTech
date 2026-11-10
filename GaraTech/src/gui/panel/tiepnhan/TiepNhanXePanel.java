@@ -1,8 +1,8 @@
 package gui.panel.tiepnhan;
 
-import dao.PhieuTiepNhanDao.PhieuTiepNhanRow;
+import dao.PhieuTiepNhanSuaChuaDao.PhieuTiepNhanSuaChuaRow;
 import entity.KhachHang;
-import entity.PhieuTiepNhan;
+import entity.PhieuTiepNhanSuaChua;
 import entity.Xe;
 import gui.Navigator;
 import gui.component.BasePanel;
@@ -14,8 +14,8 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 
 /**
- * Màn hình Tiếp nhận xe chính của vai trò Tiếp nhận (SV2).
- * Kế thừa BasePanel, điều phối linh hoạt giữa Form lập phiếu, Danh sách phiếu và Chi tiết phiếu.
+ * Màn hình Quản lý phiếu Tiếp nhận - Sửa chữa của vai trò Tiếp nhận (SV2).
+ * Kế thừa BasePanel, điều phối linh hoạt giữa Form tạo phiếu, Danh sách phiếu và Chi tiết phiếu.
  */
 public final class TiepNhanXePanel extends BasePanel {
 
@@ -33,7 +33,7 @@ public final class TiepNhanXePanel extends BasePanel {
     private String currentCard = CARD_LAP_PHIEU;
 
     public TiepNhanXePanel() {
-        super("", "Tiếp nhận xe", "");
+        super("", "Tạo phiếu tiếp nhận - sửa chữa", "");
 
         lapPhieuPanel = new LapPhieuTiepNhanPanel(
                 this::showDanhSachView,
@@ -61,10 +61,10 @@ public final class TiepNhanXePanel extends BasePanel {
 
     public void showLapPhieuView() {
         currentCard = CARD_LAP_PHIEU;
-        setHeader("", "Tiếp nhận xe", "");
+        setHeader("", "Tạo phiếu tiếp nhận - sửa chữa", "");
 
         actions.removeAll();
-        JButton btnToList = UI.secondaryButton("Danh sách tiếp nhận");
+        JButton btnToList = UI.secondaryButton("Danh sách phiếu tiếp nhận - sửa chữa");
         btnToList.addActionListener(e -> showDanhSachView());
         actions.add(btnToList);
         actions.revalidate();
@@ -77,12 +77,18 @@ public final class TiepNhanXePanel extends BasePanel {
 
     public void showDanhSachView() {
         currentCard = CARD_DANH_SACH;
-        setHeader("", "Danh sách phiếu tiếp nhận", "");
+        setHeader("", "Danh sách phiếu tiếp nhận - sửa chữa", "");
 
         actions.removeAll();
-        JButton btnCreate = UI.primaryButton("+ Lập phiếu mới");
+        // Đem nút Xem chi tiết lên cùng hàng với nút Tạo phiếu mới ở trên
+        JButton btnView = UI.secondaryButton("Xem chi tiết");
+        btnView.addActionListener(e -> danhSachPanel.handleViewSelectedDetail());
+        actions.add(btnView);
+
+        JButton btnCreate = UI.primaryButton("Tạo phiếu mới");
         btnCreate.addActionListener(e -> showLapPhieuView());
         actions.add(btnCreate);
+
         actions.revalidate();
         actions.repaint();
 
@@ -92,9 +98,9 @@ public final class TiepNhanXePanel extends BasePanel {
         repaint();
     }
 
-    public void showChiTietView(PhieuTiepNhanRow row) {
+    public void showChiTietView(PhieuTiepNhanSuaChuaRow row) {
         currentCard = CARD_CHI_TIET;
-        setHeader("", "Chi tiết phiếu tiếp nhận", "");
+        setHeader("", "Chi tiết phiếu tiếp nhận - sửa chữa", "");
 
         actions.removeAll();
         JButton btnBack = UI.secondaryButton("Quay lại danh sách");
@@ -109,7 +115,7 @@ public final class TiepNhanXePanel extends BasePanel {
         repaint();
     }
 
-    private void onTicketCreated(PhieuTiepNhan ptn) {
+    private void onTicketCreated(String maPhieu) {
         showDanhSachView();
     }
 

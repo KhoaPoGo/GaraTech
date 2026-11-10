@@ -171,8 +171,8 @@ public final class LichSuXePanel extends JPanel {
         JPanel actionsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
         actionsRow.setOpaque(false);
 
-        JButton btnViewPsc = UI.primaryButton("Xem phiếu sửa chữa");
-        btnViewPsc.addActionListener(e -> Navigator.go(Screen.PHIEU_SUA_CHUA));
+        JButton btnViewPsc = UI.primaryButton("Xem phiếu tiếp nhận - sửa chữa");
+        btnViewPsc.addActionListener(e -> Navigator.go(Screen.TIEP_NHAN_XE));
 
         JButton btnBackCust = UI.secondaryButton("Quay về hồ sơ khách");
         btnBackCust.addActionListener(e -> onBack.run());

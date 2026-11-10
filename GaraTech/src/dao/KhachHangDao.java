@@ -111,12 +111,12 @@ public final class KhachHangDao {
     }
 
     public static boolean hasTransactions(String maKH) throws SQLException {
-        String sql = "SELECT 1 WHERE EXISTS (SELECT 1 FROM PhieuTiepNhan WHERE maKH = ?) " +
-                     "OR EXISTS (SELECT 1 FROM Xe WHERE maKH = ?)";
+        String sql = "SELECT 1 WHERE EXISTS (SELECT 1 FROM Xe WHERE maKH = ?)"; // PhieuTiepNhanSuaChua lien ket qua Xe
+
         try (Connection c = ConnectDB.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, maKH);
-            ps.setString(2, maKH);
+
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
             }

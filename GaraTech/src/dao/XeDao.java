@@ -167,7 +167,7 @@ public final class XeDao {
     }
 
     public static boolean hasTickets(String bienSo) throws SQLException {
-        String sql = "SELECT 1 FROM PhieuTiepNhan WHERE bienSo = ?";
+        String sql = "SELECT 1 FROM PhieuTiepNhanSuaChua WHERE bienSo = ?";
         try (Connection c = ConnectDB.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, bienSo.trim().toUpperCase());

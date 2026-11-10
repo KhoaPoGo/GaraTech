@@ -13,6 +13,8 @@ public final class Fmt {
 
     private Fmt() {}
 
+    public static String money(double v) { return money(Math.round(v)); }
+
     /** 112400000 -> "112.400.000 ₫" */
     public static String money(long v) {
         DecimalFormatSymbols s = new DecimalFormatSymbols(Locale.ROOT);
