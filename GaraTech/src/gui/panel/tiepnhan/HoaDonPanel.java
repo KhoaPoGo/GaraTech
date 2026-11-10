@@ -43,9 +43,6 @@ import java.util.List;
 
 /**
  * Màn hình Quản lý Hóa đơn và Thanh toán thu ngân.
- * Bao gồm 2 Tab:
- * - Tab 1: Danh sách các xe đã hoàn tất sửa chữa đang chờ thanh toán.
- * - Tab 2: Lịch sử hóa đơn đã thanh toán thành công.
  */
 public final class HoaDonPanel extends BasePanel {
 
@@ -80,8 +77,8 @@ public final class HoaDonPanel extends BasePanel {
     private final JLabel lblSoLuongLichSu = UI.muted("Đang tải dữ liệu...");
 
     public HoaDonPanel() {
-        super("TIẾP NHẬN / THU NGÂN", "Quản lý hóa đơn & thanh toán",
-                "Lập hóa đơn thanh toán cho xe đã hoàn tất sửa chữa và quản lý lịch sử thu tiền của gara.");
+        super("", "Quản lý hóa đơn & thanh toán",
+                "");
 
         // Bảng Tab 1
         String[] colsChoTT = {
@@ -447,7 +444,7 @@ public final class HoaDonPanel extends BasePanel {
     }
 
     // =========================================================================
-    // XỬ LÝ SỰ KIỆN Ở CUỐI CÙNG THEO QUY TẮC BẮT BUỘC
+    // XỬ LÝ SỰ KIỆN 
     // =========================================================================
     private void initEvents() {
         // Tab 1 Events
