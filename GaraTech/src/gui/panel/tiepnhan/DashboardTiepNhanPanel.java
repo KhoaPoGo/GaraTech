@@ -84,7 +84,7 @@ public final class DashboardTiepNhanPanel extends BasePanel {
     private final StatCard cardDangSua = new StatCard("Xe đang sửa chữa", "0", "Đang thi công trên khoang");
     private final StatCard cardChoGiao = new StatCard("Sẵn sàng giao xe", "0", "Đã xong · Chờ bàn giao");
 
-    // 3. Tình trạng xe tại xưởng (Theo mẫu chuẩn CarZone)
+    // 3. Tình trạng xe tại xưởng
     private final JLabel lblXeCoMatBadge = new JLabel("0 xe có mặt") {
         @Override
         protected void paintComponent(Graphics g) {
@@ -394,7 +394,7 @@ public final class DashboardTiepNhanPanel extends BasePanel {
         cardDangSua.setValue(String.valueOf(data.dangSua()), "Đang thi công trên khoang");
         cardChoGiao.setValue(String.valueOf(data.hoanTatChoGiao()), "Đã xong · Chờ bàn giao");
 
-        // 2. Cập nhật Tình trạng xe tại xưởng (Chuẩn CarZone)
+        // 2. Cập nhật Tình trạng xe tại xưởng
         int choSua = data.choSua();
         int dangSua = data.dangSua();
         int choLK = data.choLinhKien();
@@ -766,7 +766,7 @@ public final class DashboardTiepNhanPanel extends BasePanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2 && tblChoGiao.getSelectedRow() >= 0) {
-                    Navigator.go(Screen.TIEP_NHAN_XE);
+                    Navigator.go(Screen.HOA_DON);
                 }
             }
         });

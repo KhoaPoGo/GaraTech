@@ -2,12 +2,20 @@ package entity;
 
 public class ChiTietHoaDon {
 	private String maChiTietHD;
-	private String loaiChiTiet;
+	private String maHoaDon;
+	private String loaiChiTiet; // "DichVu" hoặc "PhuTung"
+	private String maDichVu;
+	private String maPhuTung;
 	private String tenChiTiet;
+	private String donViTinh;
 	private int soLuong;
 	private double donGia;
 	private double giamGia;
 	private double thanhTien;
+
+	public ChiTietHoaDon() {
+		super();
+	}
 
 	public ChiTietHoaDon(String maChiTietHD) {
 		super();
@@ -34,6 +42,14 @@ public class ChiTietHoaDon {
 		this.maChiTietHD = maChiTietHD;
 	}
 
+	public String getMaHoaDon() {
+		return maHoaDon;
+	}
+
+	public void setMaHoaDon(String maHoaDon) {
+		this.maHoaDon = maHoaDon;
+	}
+
 	public String getLoaiChiTiet() {
 		return loaiChiTiet;
 	}
@@ -42,12 +58,36 @@ public class ChiTietHoaDon {
 		this.loaiChiTiet = loaiChiTiet;
 	}
 
+	public String getMaDichVu() {
+		return maDichVu;
+	}
+
+	public void setMaDichVu(String maDichVu) {
+		this.maDichVu = maDichVu;
+	}
+
+	public String getMaPhuTung() {
+		return maPhuTung;
+	}
+
+	public void setMaPhuTung(String maPhuTung) {
+		this.maPhuTung = maPhuTung;
+	}
+
 	public String getTenChiTiet() {
 		return tenChiTiet;
 	}
 
 	public void setTenChiTiet(String tenChiTiet) {
 		this.tenChiTiet = tenChiTiet;
+	}
+
+	public String getDonViTinh() {
+		return donViTinh;
+	}
+
+	public void setDonViTinh(String donViTinh) {
+		this.donViTinh = donViTinh;
 	}
 
 	public int getSoLuong() {
@@ -82,12 +122,8 @@ public class ChiTietHoaDon {
 		this.thanhTien = thanhTien;
 	}
 
-	// tinh thanh tien
 	public void tinhThanhTien() {
-		this.thanhTien = soLuong * donGia;
-
-		// ap dung giam gia
-
+		this.thanhTien = Math.max(0, soLuong * donGia - giamGia);
 	}
 
 	@Override
@@ -96,5 +132,4 @@ public class ChiTietHoaDon {
 				+ tenChiTiet + ", soLuong=" + soLuong + ", donGia=" + donGia + ", giamGia=" + giamGia + ", thanhTien="
 				+ thanhTien + "]";
 	}
-
 }

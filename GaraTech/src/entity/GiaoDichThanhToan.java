@@ -4,15 +4,33 @@ import java.time.LocalDateTime;
 
 public class GiaoDichThanhToan {
 	private String maGiaoDich;
+	private String maHoaDon;
+	private String maNV;
 	private LocalDateTime ngayThanhToan;
 	private double soTien;
 	private String phuongThuc;
 	private String soDung;
 	private String trangThai;
 
+	public GiaoDichThanhToan() {
+		super();
+	}
+
 	public GiaoDichThanhToan(String maGiaoDich) {
 		super();
 		this.maGiaoDich = maGiaoDich;
+	}
+
+	public GiaoDichThanhToan(String maGiaoDich, String maHoaDon, String maNV, LocalDateTime ngayThanhToan,
+			double soTien, String phuongThuc, String trangThai) {
+		super();
+		this.maGiaoDich = maGiaoDich;
+		this.maHoaDon = maHoaDon;
+		this.maNV = maNV;
+		this.ngayThanhToan = ngayThanhToan;
+		this.soTien = soTien;
+		this.phuongThuc = phuongThuc;
+		this.trangThai = trangThai;
 	}
 
 	public GiaoDichThanhToan(String maGiaoDich, LocalDateTime ngayThanhToan, double soTien, String phuongThuc,
@@ -32,6 +50,22 @@ public class GiaoDichThanhToan {
 
 	public void setMaGiaoDich(String maGiaoDich) {
 		this.maGiaoDich = maGiaoDich;
+	}
+
+	public String getMaHoaDon() {
+		return maHoaDon;
+	}
+
+	public void setMaHoaDon(String maHoaDon) {
+		this.maHoaDon = maHoaDon;
+	}
+
+	public String getMaNV() {
+		return maNV;
+	}
+
+	public void setMaNV(String maNV) {
+		this.maNV = maNV;
 	}
 
 	public LocalDateTime getNgayThanhToan() {
@@ -76,8 +110,7 @@ public class GiaoDichThanhToan {
 
 	@Override
 	public String toString() {
-		return "GiaoDichThanhToan [maGiaoDich=" + maGiaoDich + ", ngayThanhToan=" + ngayThanhToan + ", soTien=" + soTien
-				+ ", phuongThuc=" + phuongThuc + ", soDung=" + soDung + ", trangThai=" + trangThai + "]";
+		return "GiaoDichThanhToan [maGiaoDich=" + maGiaoDich + ", maHoaDon=" + maHoaDon + ", ngayThanhToan="
+				+ ngayThanhToan + ", soTien=" + soTien + ", phuongThuc=" + phuongThuc + ", trangThai=" + trangThai + "]";
 	}
-
 }
