@@ -13,9 +13,20 @@ import java.util.List;
 
 /**
  * Truy vấn dữ liệu thống kê tức thời cho Bảng điều hành Tiếp nhận viên (Dashboard Tiếp nhận).
- * Tham chiếu chuẩn theo thiết kế CarZone (TiepNhanVienDashboardData).
+ * Chuẩn hóa theo thiết kế CarZone:
+ * - 4 chỉ số KPI tức thời (dạng số nguyên 0, 1, 2...).
+ * - Tải công việc kỹ thuật viên (sắp xếp tăng dần từ bé đến lớn).
+ * - Danh sách xe sẵn sàng bàn giao (HOAN_TAT).
+ * - Danh sách xe đang xử lý tại xưởng (lọc theo trạng thái).
  */
 public final class TiepNhanDashboardDao {
+
+    public record KtvWorkloadRow(
+            String maNV,
+            String hoTen,
+            int soXeDangPhuTrach,
+            String tinhTrang // "Rảnh rỗi", "Đang làm", "Nhiều việc"
+    ) {}
 
     public record XeChoGiaoRow(
             String maPhieu,
@@ -45,6 +56,7 @@ public final class TiepNhanDashboardDao {
             int hoanTatChoGiao,
             int choSua,
             int choLinhKien,
+            List<KtvWorkloadRow> dsKtvWorkload,
             List<XeChoGiaoRow> dsChoGiao,
             List<PhieuDangXuLyRow> dsDangXuLy
     ) {}
@@ -56,6 +68,7 @@ public final class TiepNhanDashboardDao {
         int hoanTatChoGiao = 0;
         int choSua = 0;
         int choLinhKien = 0;
+        List<KtvWorkloadRow> dsKtvWorkload = new ArrayList<>();
         List<XeChoGiaoRow> dsChoGiao = new ArrayList<>();
         List<PhieuDangXuLyRow> dsDangXuLy = new ArrayList<>();
 
@@ -85,7 +98,34 @@ public final class TiepNhanDashboardDao {
                 }
             }
 
-            // 4. Danh sách xe chờ bàn giao / chờ thu tiền (HOAN_TAT)
+            // 4. Tải công việc kỹ thuật viên (SẮP XẾP TỪ BÉ ĐẾN LỚN để ưu tiên thợ rảnh)
+            String sqlKtvWorkload = """
+                SELECT nv.maNV, nv.hoTen, 
+                       COUNT(CASE WHEN p.trangThai IN ('CHO_SUA', 'DANG_SUA', 'CHO_LINH_KIEN') THEN 1 END) AS soXe
+                FROM NhanVien nv
+                LEFT JOIN PhieuTiepNhanSuaChua p ON p.maNVKyThuat = nv.maNV
+                WHERE nv.vaiTro = N'Kỹ thuật viên' AND nv.dangLam = 1
+                GROUP BY nv.maNV, nv.hoTen
+                ORDER BY soXe ASC, nv.hoTen ASC
+                """;
+            try (PreparedStatement ps = c.prepareStatement(sqlKtvWorkload); ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int soXe = rs.getInt("soXe");
+                    String tinhTrang;
+                    if (soXe == 0) tinhTrang = "Rảnh rỗi (0 xe)";
+                    else if (soXe <= 2) tinhTrang = "Đang làm (" + soXe + " xe)";
+                    else tinhTrang = "Nhiều việc (" + soXe + " xe)";
+
+                    dsKtvWorkload.add(new KtvWorkloadRow(
+                            rs.getString("maNV"),
+                            rs.getString("hoTen"),
+                            soXe,
+                            tinhTrang
+                    ));
+                }
+            }
+
+            // 5. Danh sách xe chờ bàn giao / chờ thu tiền (HOAN_TAT)
             String sqlChoGiao = """
                 SELECT TOP 10 p.maPhieu, p.bienSo, kh.hoTen, kh.soDienThoai, nv.hoTen AS tenKTV, 
                        ISNULL(v.tongChiPhi, 0) AS tongTien, p.thoiGianHoanThanh
@@ -113,7 +153,7 @@ public final class TiepNhanDashboardDao {
                 }
             }
 
-            // 5. Danh sách xe đang xử lý trong xưởng (CHO_SUA, DANG_SUA, CHO_LINH_KIEN)
+            // 6. Danh sách xe đang xử lý trong xưởng (CHO_SUA, DANG_SUA, CHO_LINH_KIEN)
             String sqlLive = """
                 SELECT p.maPhieu, p.bienSo, kh.hoTen, kh.soDienThoai, nv.hoTen AS tenKTV, 
                        p.ngayGioTiepNhan, p.trangThai, p.yeuCauBanDau
@@ -141,6 +181,6 @@ public final class TiepNhanDashboardDao {
                 }
             }
         }
-        return new DashboardData(tiepNhanHomNay, chuaPhanCongKTV, dangSua, hoanTatChoGiao, choSua, choLinhKien, dsChoGiao, dsDangXuLy);
+        return new DashboardData(tiepNhanHomNay, chuaPhanCongKTV, dangSua, hoanTatChoGiao, choSua, choLinhKien, dsKtvWorkload, dsChoGiao, dsDangXuLy);
     }
 }
