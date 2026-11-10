@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry excluding="gui/|gui/label/|dao/" kind="src" path="GaraTech/src"/>
+	<classpathentry kind="src" path="GaraTech/src/dao"/>
+	<classpathentry excluding="label/" kind="src" path="GaraTech/src/gui"/>
+	<classpathentry kind="src" path="GaraTech/src/gui/label"/>
+	<classpathentry kind="lib" path="GaraTech/lib/flatlaf-3.5.4.jar"/>
+	<classpathentry kind="lib" path="GaraTech/lib/flatlaf-fonts-inter-4.1.jar"/>
+	<classpathentry kind="lib" path="GaraTech/lib/mssql-jdbc-12.8.1.jre11.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
