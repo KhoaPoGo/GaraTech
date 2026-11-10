@@ -1,4 +1,4 @@
-package gui.label;
+package gui.panel;
 
 import enums.TrangThaiXuatKho;
 import gui.component.BasePanel;
@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-public final class YeuCauPhuTungLabel extends BasePanel {
+public final class YeuCauPhuTungPanel extends BasePanel {
 	private static final String PENDING = TrangThaiXuatKho.CHO_XAC_NHAN.label();
 	private static final String ISSUED = TrangThaiXuatKho.DA_XUAT_KHO.label();
 	private static final String CANCELED = TrangThaiXuatKho.DA_HUY.label();
@@ -68,7 +68,7 @@ public final class YeuCauPhuTungLabel extends BasePanel {
 	private String owner;
 	private int sequence = 1;
 
-	public YeuCauPhuTungLabel() {
+	public YeuCauPhuTungPanel() {
 		super("KHÔNG GIAN KỸ THUẬT VIÊN", "Yêu cầu phụ tùng",
 				"Gửi yêu cầu vật tư theo phiếu sửa chữa và theo dõi tình trạng xử lý của kho.");
 		JButton newRequest = UI.primaryButton("+ Tạo yêu cầu mới");

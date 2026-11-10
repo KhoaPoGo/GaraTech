@@ -2,21 +2,21 @@ package gui;
 
 import enums.Role;
 import gui.component.BasePanel;
-import gui.label.CongViecKTVLabel;
-import gui.label.YeuCauPhuTungLabel;
 import gui.panel.BaoCaoPanel;
+import gui.panel.CongViecKTVPanel;
 import gui.panel.DashBoardPanel;
+import gui.panel.DashboardTiepNhanPanel;
 import gui.panel.DichVuNhanSuPanel;
 import gui.panel.DieuPhoiPanel;
+import gui.panel.HoaDonPanel;
 import gui.panel.KiemTraChatLuongPanel;
 import gui.panel.KhachHangXePanel;
+import gui.panel.NhapKhoPanel;
 import gui.panel.PlaceholderPanel;
 import gui.panel.PhuTungTonKhoPanel;
-import gui.panel.NhapKhoPanel;
+import gui.panel.TiepNhanXePanel;
 import gui.panel.XuatKhoPanel;
-import gui.panel.tiepnhan.DashboardTiepNhanPanel;
-import gui.panel.tiepnhan.HoaDonPanel;
-import gui.panel.tiepnhan.TiepNhanXePanel;
+import gui.panel.YeuCauPhuTungPanel;
 
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -47,11 +47,11 @@ public enum Screen {
     // ---- Kỹ thuật viên (SV4) ----
     CONG_VIEC_KTV("Công việc của tôi", "SV4", EnumSet.of(KY_THUAT_VIEN),
             "Chỉ Hoàng thấy phiếu được phân công cho mình; tick hạng mục đã làm; cập nhật tiến độ & kết quả; xong thì chuyển sang Chờ kiểm tra.",
-            CongViecKTVLabel::new),
+            CongViecKTVPanel::new),
     
     YEU_CAU_PHU_TUNG("Yêu cầu phụ tùng", "SV4", EnumSet.of(KY_THUAT_VIEN),
             "Hoang Gửi yêu cầu xuất phụ tùng cho kho (trạng thái Chờ xác nhận); xem tình trạng yêu cầu đã gửi.",
-            YeuCauPhuTungLabel::new),
+            YeuCauPhuTungPanel::new),
 
     // ---- Tiếp nhận (SV2) ----
     DASHBOARD_TIEP_NHAN("Bảng điều hành", "SV2", EnumSet.of(TIEP_NHAN),

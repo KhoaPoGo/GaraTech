@@ -1,4 +1,4 @@
-package gui.panel.tiepnhan;
+package gui.panel;
 
 import bus.HoaDonBus;
 import com.formdev.flatlaf.FlatClientProperties;
@@ -7,6 +7,9 @@ import dao.HoaDonDao.HoaDonLichSuRow;
 import gui.component.BasePanel;
 import gui.component.Theme;
 import gui.component.UI;
+import gui.dialog.ChiTietHoaDonModalDialog;
+import gui.dialog.InHoaDonDialog;
+import gui.dialog.ThanhToanHoaDonModalDialog;
 import util.Fmt;
 import util.RoundedPanel;
 

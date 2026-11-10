@@ -1,4 +1,4 @@
-package gui.panel.khachhangxe;
+package gui.panel;
 
 import bus.KhachHangXeBus;
 import com.formdev.flatlaf.FlatClientProperties;

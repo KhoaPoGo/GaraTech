@@ -1,4 +1,4 @@
-package gui.panel.tiepnhan;
+package gui.dialog;
 
 import bus.PhieuTiepNhanSuaChuaBus;
 import com.formdev.flatlaf.FlatClientProperties;

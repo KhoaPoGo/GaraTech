@@ -1,4 +1,4 @@
-package gui.label;
+package gui.panel;
 
 import gui.component.BasePanel;
 import gui.component.Msg;
@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public final class CongViecKTVLabel extends BasePanel {
+public final class CongViecKTVPanel extends BasePanel {
 	private static final String WORKING = "Đang sửa chữa";
 	private static final String WAITING = "Chờ kiểm tra";
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy · HH:mm");
@@ -55,7 +55,7 @@ public final class CongViecKTVLabel extends BasePanel {
 	private Ticket selected;
 	private boolean loading;
 
-	public CongViecKTVLabel() {
+	public CongViecKTVPanel() {
 		super("", "", "");
 		// Thay rieng header trong panel nay, khong sua BasePanel/Theme cua ca nhom.
 		removeAll();

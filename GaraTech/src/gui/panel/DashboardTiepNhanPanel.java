@@ -1,4 +1,4 @@
-package gui.panel.tiepnhan;
+package gui.panel;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import dao.TiepNhanDashboardDao;

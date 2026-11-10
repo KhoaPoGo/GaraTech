@@ -1,4 +1,4 @@
-package gui.panel.tiepnhan;
+package gui.panel;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import dao.PhieuTiepNhanSuaChuaDao;
@@ -12,6 +12,10 @@ import gui.component.BasePanel;
 import gui.component.Msg;
 import gui.component.Theme;
 import gui.component.UI;
+import gui.dialog.ChiTietPhieuModalDialog;
+import gui.dialog.LapPhieuModalDialog;
+import gui.dialog.SuaPhieuModalDialog;
+import gui.dialog.TraCuuKhachHangDialog;
 import util.RoundedPanel;
 
 import javax.swing.AbstractAction;
