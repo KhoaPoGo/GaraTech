@@ -217,6 +217,54 @@ public class PhieuTiepNhanSuaChuaDao {
         }
     }
 
+    /**
+     * Cập nhật thông tin chung của phiếu tiếp nhận - sửa chữa (khi chưa HOAN_TAT).
+     * Cho phép chỉnh sửa: KTV phụ trách, số km tiếp nhận, mức nhiên liệu, yêu cầu, hiện trạng, hẹn trả, ghi chú.
+     */
+    public boolean updateThongTinChung(
+            String maPhieu,
+            String maNVKyThuat,
+            float soKmTiepNhan,
+            float mucNhienLieu,
+            String yeuCauBanDau,
+            String tinhTrangXe,
+            LocalDateTime thoiGianHenTra,
+            String ghiChuKyThuat
+    ) throws SQLException {
+        kiemTraChuaHoanTat(maPhieu);
+
+        String sql = """
+            UPDATE PhieuTiepNhanSuaChua
+            SET maNVKyThuat = ?,
+                soKmTiepNhan = ?,
+                mucNhienLieu = ?,
+                yeuCauBanDau = ?,
+                tinhTrangXe = ?,
+                thoiGianHenTra = ?,
+                ghiChuKyThuat = ?
+            WHERE maPhieu = ? AND trangThai != 'HOAN_TAT'
+            """;
+        try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            if (maNVKyThuat != null && !maNVKyThuat.isBlank()) {
+                ps.setString(1, maNVKyThuat.trim());
+            } else {
+                ps.setNull(1, Types.VARCHAR);
+            }
+            ps.setFloat(2, soKmTiepNhan);
+            ps.setFloat(3, mucNhienLieu);
+            ps.setString(4, yeuCauBanDau != null ? yeuCauBanDau.trim() : "");
+            ps.setString(5, tinhTrangXe != null ? tinhTrangXe.trim() : "");
+            if (thoiGianHenTra != null) {
+                ps.setTimestamp(6, Timestamp.valueOf(thoiGianHenTra));
+            } else {
+                ps.setNull(6, Types.TIMESTAMP);
+            }
+            ps.setString(7, ghiChuKyThuat != null ? ghiChuKyThuat.trim() : "");
+            ps.setString(8, maPhieu.trim());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // 3. THÊM / XÓA CHI TIẾT DỊCH VỤ (Kiểm tra chưa HOAN_TAT)
     // ─────────────────────────────────────────────────────────────────────────

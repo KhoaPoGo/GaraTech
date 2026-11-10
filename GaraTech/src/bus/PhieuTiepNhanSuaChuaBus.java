@@ -51,6 +51,17 @@ public class PhieuTiepNhanSuaChuaBus {
             double tongCong
     ) {}
 
+    public record CapNhatThongTinInput(
+            String maPhieu,
+            String maNVKyThuat,
+            float soKmTiepNhan,
+            float mucNhienLieu,
+            String yeuCauBanDau,
+            String tinhTrangXe,
+            LocalDateTime thoiGianHenTra,
+            String ghiChuKyThuat
+    ) {}
+
     // ─────────────────────────────────────────────────────────────────────────
     // 1. TẠO PHIẾU TIẾP NHẬN BAN ĐẦU (Chỉ định KTV, trạng thái CHO_SUA)
     // ─────────────────────────────────────────────────────────────────────────
@@ -110,6 +121,53 @@ public class PhieuTiepNhanSuaChuaBus {
         }
 
         return phieuDao.insert(phieu);
+    }
+
+    /**
+     * Chỉnh sửa thông tin chung của phiếu tiếp nhận (khi chưa hoàn tất).
+     * Cho phép điều phối lại KTV, cập nhật ODO, nhiên liệu, yêu cầu, hiện trạng, hẹn trả, ghi chú.
+     */
+    public void capNhatThongTinPhieu(CapNhatThongTinInput in) throws Exception {
+        if (in.maPhieu() == null || in.maPhieu().isBlank()) {
+            throw new BusinessException("Mã phiếu không hợp lệ.");
+        }
+        PhieuTiepNhanSuaChua phieu = layThongTinPhieu(in.maPhieu());
+        if (phieu == null) {
+            throw new BusinessException("Không tìm thấy phiếu " + in.maPhieu());
+        }
+        if (phieu.getTrangThai() == TrangThaiPhieu.HOAN_TAT) {
+            throw new BusinessException("Phiếu đã Hoàn tất và bị khóa, không được chỉnh sửa.");
+        }
+        if (in.soKmTiepNhan() < 0) {
+            throw new BusinessException("Số km tiếp nhận không hợp lệ.");
+        }
+        if (in.mucNhienLieu() < 0 || in.mucNhienLieu() > 1.0f) {
+            throw new BusinessException("Mức nhiên liệu không hợp lệ (từ 0% đến 100%).");
+        }
+        if (in.yeuCauBanDau() == null || in.yeuCauBanDau().isBlank()) {
+            throw new BusinessException("Yêu cầu ban đầu của khách không được để trống.");
+        }
+
+        // Kiểm tra KTV chính không được trùng với NV tiếp nhận
+        if (in.maNVKyThuat() != null && !in.maNVKyThuat().isBlank() &&
+            phieu.getNhanVienTiepNhan() != null &&
+            in.maNVKyThuat().trim().equalsIgnoreCase(phieu.getNhanVienTiepNhan().getMaNV())) {
+            throw new BusinessException("Kỹ thuật viên phụ trách không được trùng với nhân viên tiếp nhận phiếu.");
+        }
+
+        boolean ok = phieuDao.updateThongTinChung(
+                in.maPhieu(),
+                in.maNVKyThuat(),
+                in.soKmTiepNhan(),
+                in.mucNhienLieu(),
+                in.yeuCauBanDau(),
+                in.tinhTrangXe(),
+                in.thoiGianHenTra(),
+                in.ghiChuKyThuat()
+        );
+        if (!ok) {
+            throw new BusinessException("Không thể cập nhật phiếu tiếp nhận. Vui lòng kiểm tra lại trạng thái phiếu.");
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
