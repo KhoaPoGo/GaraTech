@@ -19,16 +19,12 @@ import java.util.Set;
 /**
  * DAO xử lý yêu cầu xuất phụ tùng của Kỹ thuật viên và nghiệp vụ duyệt xuất kho.
  *
- * Tên bảng/cột được căn cứ theo sql/01_TaoBang.sql:
- *   PhieuXuatKho(maPhieuXK, maPhieuSC, maKTVYeuCau, maNVKho, ngayYeuCau,
+ * Tên bảng/cột được căn cứ theo schema mới:
+ *   PhieuXuatKho(maPhieuXK, maPhieu, maKTVYeuCau, maNVKho, ngayYeuCau,
  *                ngayXuat, lyDoXuat, lyDoTuChoi, tongGiaTri, trangThai)
+ *   maPhieuSC chỉ là computed column AS maPhieu, không được INSERT/UPDATE trực tiếp.
  *   ChiTietXuatKho(maChiTietXK, maPhieuXK, maPhuTung, soLuongXuat,
  *                  donGiaXuat, thanhTien, ghiChu)
- *
- * Lưu ý: entity.PhieuXuatKho hiện chưa có đủ các thuộc tính liên kết theo schema
- * (maPhieuSC, maKTVYeuCau, maNVKho, ngayYeuCau, lyDoTuChoi). Vì vậy DAO dùng
- * các record kết quả và tham số nghiệp vụ riêng, không giả định các thuộc tính
- * chưa tồn tại trong Entity.
  */
 public class PhieuXuatKhoDao {
 
@@ -93,7 +89,7 @@ public class PhieuXuatKhoDao {
 
     private static final String SELECT_REQUESTS = """
             SELECT px.maPhieuXK,
-                   px.maPhieuSC,
+                   px.maPhieu AS maPhieuSC,
                    px.maKTVYeuCau,
                    ktv.hoTen AS tenKTVYeuCau,
                    px.maNVKho,
@@ -236,20 +232,30 @@ public class PhieuXuatKhoDao {
         }
 
         return ConnectDB.inTransaction(c -> {
-            // Bảo đảm người gửi là KTV đang được phân công cho phiếu tiếp nhận - sửa chữa này.
-            String sqlCheckTechnician =
-                    "SELECT maNVKyThuat AS maKTV FROM PhieuTiepNhanSuaChua WHERE maPhieu = ?";
+            // Khóa dòng phiếu và xác nhận KTV được phân công đúng phiếu.
+            // Chỉ cho gửi yêu cầu khi phiếu đang sửa hoặc đang chờ linh kiện.
+            String sqlCheckTechnician = """
+                    SELECT maNVKyThuat, trangThai
+                    FROM dbo.PhieuTiepNhanSuaChua WITH (UPDLOCK, HOLDLOCK)
+                    WHERE maPhieu = ?
+                    """;
             try (PreparedStatement ps = c.prepareStatement(sqlCheckTechnician)) {
-                ps.setString(1, maPhieuSC);
+                ps.setString(1, maPhieuSC.trim());
                 try (ResultSet rs = ps.executeQuery()) {
                     if (!rs.next()) {
-                        throw new SQLException("Không tìm thấy phiếu sửa chữa: " + maPhieuSC);
+                        throw new SQLException("Không tìm thấy phiếu tiếp nhận - sửa chữa: " + maPhieuSC);
                     }
-                    String maKTVDuocPhanCong = rs.getString("maKTV");
+                    String maKTVDuocPhanCong = rs.getString("maNVKyThuat");
+                    String trangThaiPhieu = rs.getString("trangThai");
                     if (maKTVDuocPhanCong == null
-                            || !maKTVDuocPhanCong.equalsIgnoreCase(maKTVYeuCau)) {
+                            || !maKTVDuocPhanCong.equalsIgnoreCase(maKTVYeuCau.trim())) {
                         throw new SQLException(
-                                "Kỹ thuật viên không được phân công cho phiếu sửa chữa này.");
+                                "Kỹ thuật viên không được phân công cho phiếu này.");
+                    }
+                    if (!"DANG_SUA".equals(trangThaiPhieu)
+                            && !"CHO_LINH_KIEN".equals(trangThaiPhieu)) {
+                        throw new SQLException(
+                                "Chỉ được gửi yêu cầu phụ tùng khi phiếu Đang sửa hoặc Chờ linh kiện.");
                     }
                 }
             }
@@ -257,8 +263,8 @@ public class PhieuXuatKhoDao {
             String maPhieuXK = IdGenerator.next(c, Kind.PHIEU_XUAT_KHO);
 
             String sqlHeader = """
-                    INSERT INTO PhieuXuatKho
-                        (maPhieuXK, maPhieuSC, maKTVYeuCau, lyDoXuat, tongGiaTri, trangThai)
+                    INSERT INTO dbo.PhieuXuatKho
+                        (maPhieuXK, maPhieu, maKTVYeuCau, lyDoXuat, tongGiaTri, trangThai)
                     VALUES (?, ?, ?, ?, 0, ?)
                     """;
             try (PreparedStatement ps = c.prepareStatement(sqlHeader)) {
@@ -340,14 +346,19 @@ public class PhieuXuatKhoDao {
         return ConnectDB.inTransaction(c -> {
             // Khóa phiếu trong lúc duyệt để tránh hai nhân viên kho duyệt cùng một phiếu.
             String currentStatus;
-            String sqlLockHeader =
-                    "SELECT trangThai FROM PhieuXuatKho WITH (UPDLOCK, HOLDLOCK) WHERE maPhieuXK = ?";
+            String maPhieuLienKet;
+            String sqlLockHeader = """
+                    SELECT maPhieu, trangThai
+                    FROM dbo.PhieuXuatKho WITH (UPDLOCK, HOLDLOCK)
+                    WHERE maPhieuXK = ?
+                    """;
             try (PreparedStatement ps = c.prepareStatement(sqlLockHeader)) {
                 ps.setString(1, maPhieuXK);
                 try (ResultSet rs = ps.executeQuery()) {
                     if (!rs.next()) {
                         throw new SQLException("Không tìm thấy phiếu xuất kho: " + maPhieuXK);
                     }
+                    maPhieuLienKet = rs.getString("maPhieu");
                     currentStatus = rs.getString("trangThai");
                 }
             }
@@ -420,6 +431,26 @@ public class PhieuXuatKhoDao {
                 if (ps.executeUpdate() != 1) {
                     throw new SQLException("Không thể cập nhật trạng thái phiếu xuất kho.");
                 }
+            }
+
+            // Nếu phiếu sửa chữa đang CHO_LINH_KIEN và tất cả yêu cầu kho của phiếu
+            // đã được xử lý, tự đưa phiếu trở lại DANG_SUA để KTV tiếp tục thi công.
+            String sqlResumeRepair = """
+                    UPDATE p
+                    SET p.trangThai = 'DANG_SUA'
+                    FROM dbo.PhieuTiepNhanSuaChua p
+                    WHERE p.maPhieu = ?
+                      AND p.trangThai = 'CHO_LINH_KIEN'
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM dbo.PhieuXuatKho px
+                          WHERE px.maPhieu = p.maPhieu
+                            AND px.trangThai = N'Chờ xác nhận'
+                      )
+                    """;
+            try (PreparedStatement ps = c.prepareStatement(sqlResumeRepair)) {
+                ps.setString(1, maPhieuLienKet);
+                ps.executeUpdate();
             }
 
             return true;
