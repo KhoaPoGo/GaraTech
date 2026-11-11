@@ -39,8 +39,8 @@ public class BaoCaoDao {
 
     /** Tổng tiền đã thu trong khoảng ngày. */
     public long thucThu(LocalDate from, LocalDate to) throws SQLException {
-        String sql = "SELECT ISNULL(SUM(soTien), 0) FROM GiaoDichThanhToan"
-                + " WHERE trangThai = N'Đã thanh toán' AND ngayThanhToan >= ? AND ngayThanhToan < ?";
+        String sql = "SELECT ISNULL(SUM(tongTienThanhToan), 0) FROM HoaDon"
+                + " WHERE trangThai = N'Đã thanh toán' AND ngayLap >= ? AND ngayLap < ?";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setTimestamp(1, start(from));
             ps.setTimestamp(2, endExclusive(to));
@@ -48,16 +48,10 @@ public class BaoCaoDao {
         }
     }
 
-    /** Tiền còn phải thu của các hóa đơn lập trong khoảng ngày (đã trừ phần đã thanh toán, bỏ hóa đơn hủy). */
+    /** Tiền còn phải thu của các hóa đơn lập trong khoảng ngày (bỏ hóa đơn hủy). */
     public long conChoThu(LocalDate from, LocalDate to) throws SQLException {
-        String sql = """
-                SELECT ISNULL(SUM(CASE WHEN hd.tongTienThanhToan > ISNULL(t.daThu, 0)
-                                       THEN hd.tongTienThanhToan - ISNULL(t.daThu, 0) ELSE 0 END), 0)
-                FROM HoaDon hd
-                LEFT JOIN (SELECT maHoaDon, SUM(soTien) AS daThu FROM GiaoDichThanhToan
-                           WHERE trangThai = N'Đã thanh toán' GROUP BY maHoaDon) t ON t.maHoaDon = hd.maHoaDon
-                WHERE hd.trangThai <> N'Đã hủy' AND hd.ngayLap >= ? AND hd.ngayLap < ?
-                """;
+        String sql = "SELECT ISNULL(SUM(tongTienThanhToan), 0) FROM HoaDon"
+                + " WHERE trangThai = N'Chưa thanh toán' AND ngayLap >= ? AND ngayLap < ?";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setTimestamp(1, start(from));
             ps.setTimestamp(2, endExclusive(to));
@@ -74,7 +68,7 @@ public class BaoCaoDao {
         }
     }
 
-    /** Số phiếu sửa chữa hoàn thành (kể cả đã bàn giao) trong khoảng ngày. */
+    /** Số phiếu sửa chữa hoàn thành trong khoảng ngày. */
     public long soPhieuHoanThanh(LocalDate from, LocalDate to) throws SQLException {
         String sql = "SELECT COUNT(*) FROM PhieuTiepNhanSuaChua WHERE trangThai = 'HOAN_TAT'"
                 + " AND thoiGianHoanThanh >= ? AND thoiGianHoanThanh < ?";
@@ -87,9 +81,9 @@ public class BaoCaoDao {
 
     /** Thực thu theo từng ngày có giao dịch (ngày không có giao dịch không xuất hiện trong kết quả). */
     public Map<LocalDate, Long> thucThuTheoNgay(LocalDate from, LocalDate to) throws SQLException {
-        String sql = "SELECT CAST(ngayThanhToan AS DATE) AS ngay, SUM(soTien) AS tong FROM GiaoDichThanhToan"
-                + " WHERE trangThai = N'Đã thanh toán' AND ngayThanhToan >= ? AND ngayThanhToan < ?"
-                + " GROUP BY CAST(ngayThanhToan AS DATE)";
+        String sql = "SELECT CAST(ngayLap AS DATE) AS ngay, SUM(tongTienThanhToan) AS tong FROM HoaDon"
+                + " WHERE trangThai = N'Đã thanh toán' AND ngayLap >= ? AND ngayLap < ?"
+                + " GROUP BY CAST(ngayLap AS DATE)";
         Map<LocalDate, Long> out = new LinkedHashMap<>();
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setTimestamp(1, start(from));
@@ -168,7 +162,7 @@ public class BaoCaoDao {
         return out;
     }
 
-    /** Số phiếu đang sửa / đã xác nhận mà quá hạn dự kiến. */
+    /** Số phiếu đang sửa / chờ sửa mà quá hạn dự kiến. */
     public long demPhieuQuaHan(LocalDateTime now) throws SQLException {
         String sql = "SELECT COUNT(*) FROM PhieuTiepNhanSuaChua WHERE trangThai IN ('CHO_SUA','DANG_SUA','CHO_LINH_KIEN') AND thoiGianHenTra < ?";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
@@ -177,7 +171,7 @@ public class BaoCaoDao {
         }
     }
 
-    /** Số phiếu hoàn thành kỹ thuật trong ngày, tách theo trạng thái hiện tại (Hoàn thành / Đã bàn giao). */
+    /** Số phiếu hoàn thành trong ngày. */
     public Map<String, Long> demHoanThanhTrongNgay(LocalDate d) throws SQLException {
         Map<String, Long> out = new LinkedHashMap<>();
         String sql = "SELECT trangThai, COUNT(*) AS soPhieu FROM PhieuTiepNhanSuaChua"

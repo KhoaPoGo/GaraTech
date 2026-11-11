@@ -60,4 +60,15 @@ public final class DieuPhoiPanel extends BasePanel {
         heading.setText("Phiếu "+p.maPhieuSC()+" · "+p.trangThai().label());
         info.setText("Khách hàng: "+p.tenKhach()+"\nXe: "+p.bienSo()+" · "+p.tenXe()+"\nKỹ thuật viên: "+(p.tenKTV()==null?"Chưa gán":p.tenKTV())+"\nYêu cầu: "+(p.yeuCau()==null?"":p.yeuCau())+"\nNgày bắt đầu: "+(p.batDau()==null?"Chưa bắt đầu":Fmt.dateTime(p.batDau()))+"\nHẹn trả: "+(p.duKien()==null?"Chưa có":Fmt.dateTime(p.duKien()))+"\nTiến độ: "+p.tienDo()+"%\n\nSQL hiện lưu trạng thái phiếu và thông tin bắt đầu/hẹn trả; chưa lưu tiến độ từng hạng mục.");
     }
+
+    // ======================================================================
+    // XỬ LÝ SỰ KIỆN Ở CUỐI CÙNG THEO QUY TẮC BẮT BUỘC
+    // ======================================================================
+    private void initEvents() {
+        btnRefresh.addActionListener(e -> reload());
+        btnLuu.addActionListener(e -> luuPhanCong());
+        btnBatDau.addActionListener(e -> batDau());
+        btnHuy.addActionListener(e -> huy());
+        btnKiemTra.addActionListener(e -> Navigator.go(Screen.KIEM_TRA_CL));
+    }
 }

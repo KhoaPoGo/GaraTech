@@ -151,17 +151,12 @@ public class HoaDonDao {
                        x.bienSo, x.hangXe, x.model, x.namSanXuat, x.mauXe,
                        kh.hoTen AS tenKH, kh.soDienThoai AS sdtKH,
                        nv.hoTen AS tenNVLap,
-                       gd.phuongThuc, gd.maGiaoDich
+                       hd.phuongThuc, hd.maGiaoDich
                 FROM HoaDon hd
                 JOIN PhieuTiepNhanSuaChua p ON hd.maPhieu = p.maPhieu
                 JOIN Xe x ON p.bienSo = x.bienSo
                 JOIN KhachHang kh ON x.maKH = kh.maKH
                 JOIN NhanVien nv ON hd.maNV = nv.maNV
-                LEFT JOIN (
-                    SELECT maHoaDon, phuongThuc, maGiaoDich,
-                           ROW_NUMBER() OVER (PARTITION BY maHoaDon ORDER BY ngayThanhToan DESC) as rn
-                    FROM GiaoDichThanhToan
-                ) gd ON gd.maHoaDon = hd.maHoaDon AND gd.rn = 1
                 ORDER BY hd.ngayLap DESC, hd.maHoaDon DESC
                 """;
 
