@@ -38,8 +38,11 @@ public class DichVuDao {
 
     public DichVu findById(String maDichVu) throws SQLException {
         if (maDichVu == null || maDichVu.isBlank()) return null;
-        List<DichVu> list = query("WHERE maDichVu = '" + maDichVu.trim() + "'");
-        return list.isEmpty() ? null : list.get(0);
+        String sql = "SELECT " + COLS + " FROM DichVu WHERE maDichVu = ?";
+        try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, maDichVu.trim());
+            try (ResultSet rs = ps.executeQuery()) { return rs.next() ? map(rs) : null; }
+        }
     }
 
     /** Chỉ các dịch vụ đang cung cấp (dùng khi chọn dịch vụ cho phiếu sửa chữa). */

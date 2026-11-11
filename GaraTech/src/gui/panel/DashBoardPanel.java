@@ -75,7 +75,7 @@ public final class DashBoardPanel extends BasePanel {
         JButton refresh = UI.secondaryButton("Làm mới");
         refresh.addActionListener(e -> reload());
         actions.add(refresh);
-        JButton go = UI.primaryButton("Điều phối công việc");
+        JButton go = UI.primaryButton("Theo dõi tiến độ");
         go.addActionListener(e -> Navigator.go(Screen.DIEU_PHOI));
         actions.add(go);
 

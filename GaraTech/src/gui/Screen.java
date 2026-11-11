@@ -10,6 +10,7 @@ import gui.panel.DichVuNhanSuPanel;
 import gui.panel.DieuPhoiPanel;
 import gui.panel.HoaDonPanel;
 import gui.panel.KiemTraChatLuongPanel;
+import gui.panel.KhuyenMaiPanel;
 import gui.panel.KhachHangXePanel;
 import gui.panel.NhapKhoPanel;
 import gui.panel.PlaceholderPanel;
@@ -38,11 +39,11 @@ public enum Screen {
             "Số xe tiếp nhận / đang sửa / hoàn thành kỹ thuật / doanh thu ngày; biểu đồ 7 ngày; cảnh báo tồn kho; phiếu đang hoạt động.",
             DashBoardPanel::new),
     DIEU_PHOI("Điều phối & tiến độ", "SV1", EnumSet.of(QUAN_LY),
-            "Kanban 5 cột theo trạng thái phiếu; chọn kỹ thuật viên (chuyên môn, rảnh/bận); hạn hoàn thành; khung kiểm soát tiến độ.",
+            "Chỉ xem các phiếu tiếp nhận-sửa chữa thống nhất theo trạng thái và thông tin tiến độ.",
             DieuPhoiPanel::new),
     KIEM_TRA_CL("Kiểm tra chất lượng (KCS)", "SV1", EnumSet.of(QUAN_LY),
-            "2 cột đối chiếu (KTV báo / quản lý kiểm); checklist bắt buộc (đã chạy thử, không rò rỉ nhớt, vệ sinh xe) mới cho chuyển Hoàn thành.",
-            KiemTraChatLuongPanel::new),
+    		"2 cột đối chiếu (KTV báo / quản lý kiểm); checklist bắt buộc (đã chạy thử, không rò rỉ nhớt, vệ sinh xe) mới cho chuyển Hoàn thành.",
+    		KiemTraChatLuongPanel::new),
 
     // ---- Kỹ thuật viên (SV4) ----
     CONG_VIEC_KTV("Thực hiện sửa chữa", "SV4", EnumSet.of(KY_THUAT_VIEN),
@@ -83,8 +84,10 @@ public enum Screen {
 
     // ---- Quản lý (SV1) ----
     DICH_VU_NHAN_SU("Quản lý dịch vụ & nhân sự", "SV1", EnumSet.of(QUAN_LY),
-            "Tab: Dịch vụ & đơn giá / Nhân viên / Tài khoản / Bảng phân quyền; KHÓA tài khoản thay vì xóa; heSoLuong 1.0–5.0.",
+            "Quản lý dịch vụ, nhân viên, tài khoản và bảng quyền theo vai trò.",
             DichVuNhanSuPanel::new),
+    KHUYEN_MAI("Quản lý khuyến mãi", "SV1", EnumSet.of(QUAN_LY),
+            "Quản lý chương trình, tỷ lệ giảm và thời hạn theo bảng KhuyenMai.", KhuyenMaiPanel::new),
     BAO_CAO("Báo cáo & thống kê doanh thu", "SV1", EnumSet.of(QUAN_LY),
             "Lọc từ ngày – đến ngày; thực thu vs còn chờ thu; cơ cấu dịch vụ; nhóm phụ tùng tiêu thụ nhiều.",
             BaoCaoPanel::new);

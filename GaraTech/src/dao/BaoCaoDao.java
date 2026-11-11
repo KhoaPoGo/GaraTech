@@ -76,7 +76,7 @@ public class BaoCaoDao {
 
     /** Số phiếu sửa chữa hoàn thành (kể cả đã bàn giao) trong khoảng ngày. */
     public long soPhieuHoanThanh(LocalDate from, LocalDate to) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM PhieuSuaChua WHERE trangThai IN (N'Hoàn thành', N'Đã bàn giao')"
+        String sql = "SELECT COUNT(*) FROM PhieuTiepNhanSuaChua WHERE trangThai = 'HOAN_TAT'"
                 + " AND thoiGianHoanThanh >= ? AND thoiGianHoanThanh < ?";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setTimestamp(1, start(from));
@@ -142,7 +142,7 @@ public class BaoCaoDao {
     // ---------------------------------------------------------------- Dashboard
 
     public long demTiepNhanTrongNgay(LocalDate d) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM PhieuTiepNhan WHERE trangThai <> N'Đã hủy' AND thoiGianTiepNhan >= ? AND thoiGianTiepNhan < ?";
+        String sql = "SELECT COUNT(*) FROM PhieuTiepNhanSuaChua WHERE ngayGioTiepNhan >= ? AND ngayGioTiepNhan < ?";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setTimestamp(1, start(d));
             ps.setTimestamp(2, endExclusive(d));
@@ -152,7 +152,7 @@ public class BaoCaoDao {
 
     public long demPhieuTiepNhanChoXuLy() throws SQLException {
         try (Connection c = ConnectDB.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT COUNT(*) FROM PhieuTiepNhan WHERE trangThai = N'Chờ xử lý'")) {
+             PreparedStatement ps = c.prepareStatement("SELECT COUNT(*) FROM PhieuTiepNhanSuaChua WHERE trangThai = 'CHO_SUA'")) {
             return scalarLong(ps);
         }
     }
@@ -161,7 +161,7 @@ public class BaoCaoDao {
     public Map<String, Long> demPhieuTheoTrangThai() throws SQLException {
         Map<String, Long> out = new LinkedHashMap<>();
         try (Connection c = ConnectDB.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT trangThai, COUNT(*) AS soPhieu FROM PhieuSuaChua GROUP BY trangThai");
+             PreparedStatement ps = c.prepareStatement("SELECT trangThai, COUNT(*) AS soPhieu FROM PhieuTiepNhanSuaChua GROUP BY trangThai");
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) out.put(rs.getString("trangThai"), rs.getLong("soPhieu"));
         }
@@ -170,7 +170,7 @@ public class BaoCaoDao {
 
     /** Số phiếu đang sửa / đã xác nhận mà quá hạn dự kiến. */
     public long demPhieuQuaHan(LocalDateTime now) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM PhieuSuaChua WHERE trangThai IN (N'Đã xác nhận', N'Đang sửa chữa') AND thoiGianDuKien < ?";
+        String sql = "SELECT COUNT(*) FROM PhieuTiepNhanSuaChua WHERE trangThai IN ('CHO_SUA','DANG_SUA','CHO_LINH_KIEN') AND thoiGianHenTra < ?";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setTimestamp(1, Timestamp.valueOf(now));
             return scalarLong(ps);
@@ -180,8 +180,8 @@ public class BaoCaoDao {
     /** Số phiếu hoàn thành kỹ thuật trong ngày, tách theo trạng thái hiện tại (Hoàn thành / Đã bàn giao). */
     public Map<String, Long> demHoanThanhTrongNgay(LocalDate d) throws SQLException {
         Map<String, Long> out = new LinkedHashMap<>();
-        String sql = "SELECT trangThai, COUNT(*) AS soPhieu FROM PhieuSuaChua"
-                + " WHERE trangThai IN (N'Hoàn thành', N'Đã bàn giao') AND thoiGianHoanThanh >= ? AND thoiGianHoanThanh < ?"
+        String sql = "SELECT trangThai, COUNT(*) AS soPhieu FROM PhieuTiepNhanSuaChua"
+                + " WHERE trangThai = 'HOAN_TAT' AND thoiGianHoanThanh >= ? AND thoiGianHoanThanh < ?"
                 + " GROUP BY trangThai";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setTimestamp(1, start(d));

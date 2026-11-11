@@ -68,7 +68,7 @@ public final class NhanSuService {
     private void chanNeuConViec(String maKTV, String hanhDong) throws SQLException {
         int n = nvDao.demPhieuDangGiao(maKTV);
         if (n > 0) throw new BusinessException("Không thể " + hanhDong + " vì kỹ thuật viên này đang phụ trách " + n
-                + " phiếu sửa chữa chưa hoàn tất. Hãy phân công lại ở màn Điều phối trước.");
+                + " phiếu tiếp nhận-sửa chữa chưa hoàn tất. Chỉ có thể thay đổi khi các phiếu này hoàn tất.");
     }
 
     private NhanVien kiemTra(String maNV, String hoTen, String sdt, String email, String diaChi, Role vaiTro,
