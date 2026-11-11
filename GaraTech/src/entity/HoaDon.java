@@ -11,8 +11,7 @@ import java.util.Objects;
 
 /**
  * Thực thể Hóa đơn thanh toán dịch vụ & phụ tùng.
- * Sử dụng enum cho phương thức thanh toán (PhuongThucThanhToan)
- * và trạng thái thanh toán (TrangThaiThanhToan: CHUA_THANH_TOAN, DA_THANH_TOAN).
+ *
  */
 public class HoaDon {
     private String maHoaDon;
