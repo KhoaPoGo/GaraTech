@@ -43,7 +43,7 @@ public final class KiemTraChatLuongPanel extends BasePanel {
 
     private final DefaultTableModel listModel = UI.readOnlyModel("Phiếu / phương tiện", "Khách hàng", "Kỹ thuật viên", "Tiến độ", "Hạn dự kiến");
     private final JTable listTable = UI.table(listModel);
-    private final JLabel emptyHint = UI.muted("Không có phiếu nào đang chờ kiểm tra.");
+    private final JLabel emptyHint = UI.muted("Schema hiện tại không có trạng thái KCS riêng; màn này chưa có phiếu để duyệt.");
 
     private final JLabel lbTitle = UI.h2("Chọn một phiếu ở trên để kiểm tra");
     private final JTextArea ktvNote = new JTextArea(4, 20);

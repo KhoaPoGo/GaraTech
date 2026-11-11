@@ -164,7 +164,7 @@ public class BaoCaoDao {
 
     /** Số phiếu đang sửa / chờ sửa mà quá hạn dự kiến. */
     public long demPhieuQuaHan(LocalDateTime now) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM PhieuTiepNhanSuaChua WHERE trangThai IN ('CHO_SUA', 'DANG_SUA', 'CHO_LINH_KIEN') AND thoiGianHenTra IS NOT NULL AND thoiGianHenTra < ?";
+        String sql = "SELECT COUNT(*) FROM PhieuTiepNhanSuaChua WHERE trangThai IN ('CHO_SUA','DANG_SUA','CHO_LINH_KIEN') AND thoiGianHenTra < ?";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setTimestamp(1, Timestamp.valueOf(now));
             return scalarLong(ps);

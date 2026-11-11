@@ -6,10 +6,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-/**
- * Thực thể Chương trình Khuyến mãi (KhuyenMai).
- * Hỗ trợ áp dụng giảm giá theo phần trăm cho toàn bộ hóa đơn hoặc danh mục dịch vụ / phụ tùng cụ thể.
- */
+/** Entity KhuyenMai tương ứng bảng SQL (maKM, maNV, tên, phần trăm, ngày bắt đầu/kết thúc, ghi chú). */
 public class KhuyenMai {
     private String maKM;
     private String maNVTao;
@@ -19,7 +16,7 @@ public class KhuyenMai {
     private LocalDate ngayKetThuc;
     private String ghiChu;
 
-    // Danh sách mã dịch vụ và phụ tùng áp dụng (rỗng = áp dụng tất cả)
+    // Giữ tương thích với màn thanh toán cũ; schema hiện tại không lưu danh sách áp dụng riêng.
     private Set<String> dsDichVuApDung = new HashSet<>();
     private Set<String> dsPhuTungApDung = new HashSet<>();
 

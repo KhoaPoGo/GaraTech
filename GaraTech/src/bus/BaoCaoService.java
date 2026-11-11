@@ -79,12 +79,13 @@ public final class BaoCaoService {
         Map<String, Long> theoTT = dao.demPhieuTheoTrangThai();
         Map<String, Long> xongHom = dao.demHoanThanhTrongNgay(hom);
         return new DashboardData(dao.demTiepNhanTrongNgay(hom), dao.demPhieuTiepNhanChoXuLy(),
-                theoTT.getOrDefault("DANG_SUA", 0L), dao.demPhieuQuaHan(LocalDateTime.now()),
-                xongHom.getOrDefault("HOAN_TAT", 0L),
+                theoTT.getOrDefault(TrangThaiPhieu.DANG_SUA.name(), 0L) + theoTT.getOrDefault(TrangThaiPhieu.CHO_LINH_KIEN.name(), 0L), dao.demPhieuQuaHan(LocalDateTime.now()),
+                xongHom.getOrDefault(TrangThaiPhieu.HOAN_TAT.name(), 0L),
                 0L,
-                theoTT.getOrDefault("CHO_LINH_KIEN", 0L),
+                0L,
                 ngay.getOrDefault(hom, 0L), dao.conChoThu(LocalDate.of(2000, 1, 1), hom),
                 bay, tong7, truoc, tu, hom, dao.canhBaoTonKho(3),
-                phieuDao.findByTrangThai(6, TrangThaiPhieu.CHO_SUA, TrangThaiPhieu.DANG_SUA, TrangThaiPhieu.CHO_LINH_KIEN));
+                phieuDao.findByTrangThai(6, TrangThaiPhieu.CHO_SUA, TrangThaiPhieu.DANG_SUA,
+                        TrangThaiPhieu.CHO_LINH_KIEN));
     }
 }
