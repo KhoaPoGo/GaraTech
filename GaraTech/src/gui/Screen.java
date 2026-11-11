@@ -9,9 +9,9 @@ import gui.panel.DashboardTiepNhanPanel;
 import gui.panel.DichVuNhanSuPanel;
 import gui.panel.DieuPhoiPanel;
 import gui.panel.HoaDonPanel;
-import gui.panel.KiemTraChatLuongPanel;
 import gui.panel.KhuyenMaiPanel;
 import gui.panel.KhachHangXePanel;
+import gui.panel.QuanLyDichVuPanel;
 import gui.panel.NhapKhoPanel;
 import gui.panel.PlaceholderPanel;
 import gui.panel.PhuTungTonKhoPanel;
@@ -38,13 +38,9 @@ public enum Screen {
     DASHBOARD("Tổng quan hệ thống", "SV1", EnumSet.of(QUAN_LY),
             "Số xe tiếp nhận / đang sửa / hoàn thành kỹ thuật / doanh thu ngày; biểu đồ 7 ngày; cảnh báo tồn kho; phiếu đang hoạt động.",
             DashBoardPanel::new),
-    DIEU_PHOI("Điều phối & tiến độ", "SV1", EnumSet.of(QUAN_LY),
+    DIEU_PHOI("Kiểm tra tiến độ", "SV1", EnumSet.of(QUAN_LY),
             "Chỉ xem các phiếu tiếp nhận-sửa chữa thống nhất theo trạng thái và thông tin tiến độ.",
             DieuPhoiPanel::new),
-    KIEM_TRA_CL("Kiểm tra chất lượng (KCS)", "SV1", EnumSet.of(QUAN_LY),
-    		"2 cột đối chiếu (KTV báo / quản lý kiểm); checklist bắt buộc (đã chạy thử, không rò rỉ nhớt, vệ sinh xe) mới cho chuyển Hoàn thành.",
-    		KiemTraChatLuongPanel::new),
-
     // ---- Kỹ thuật viên (SV4) ----
     CONG_VIEC_KTV("Thực hiện sửa chữa", "SV4", EnumSet.of(KY_THUAT_VIEN),
             "Chỉ KTV thấy phiếu được phân công cho mình; tick hạng mục đã làm; cập nhật tiến độ & kết quả; xong thì chuyển sang Chờ kiểm tra.",
@@ -83,9 +79,11 @@ public enum Screen {
             XuatKhoPanel::new),
 
     // ---- Quản lý (SV1) ----
-    DICH_VU_NHAN_SU("Quản lý dịch vụ & nhân sự", "SV1", EnumSet.of(QUAN_LY),
-            "Quản lý dịch vụ, nhân viên, tài khoản và bảng quyền theo vai trò.",
+    DICH_VU_NHAN_SU("Quản lý nhân sự", "SV1", EnumSet.of(QUAN_LY),
+            "Quản lý hồ sơ nhân viên, tài khoản và bảng quyền theo vai trò.",
             DichVuNhanSuPanel::new),
+    QUAN_LY_DICH_VU("Quản lý dịch vụ", "SV1", EnumSet.of(QUAN_LY),
+            "Quản lý danh mục dịch vụ, đơn giá công và trạng thái cung cấp.", QuanLyDichVuPanel::new),
     KHUYEN_MAI("Quản lý khuyến mãi", "SV1", EnumSet.of(QUAN_LY),
             "Quản lý chương trình, tỷ lệ giảm và thời hạn theo bảng KhuyenMai.", KhuyenMaiPanel::new),
     BAO_CAO("Báo cáo & thống kê doanh thu", "SV1", EnumSet.of(QUAN_LY),

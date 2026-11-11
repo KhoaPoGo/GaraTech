@@ -20,12 +20,14 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -61,6 +63,8 @@ public final class BaoCaoPanel extends BasePanel {
 
     private final DefaultTableModel dvModel = UI.readOnlyModel("Dịch vụ", "Số lần", "Doanh thu", "Tỷ trọng");
     private final DefaultTableModel ptModel = UI.readOnlyModel("Nhóm phụ tùng", "Số lượng", "Doanh thu", "Tỷ trọng");
+    private final DefaultTableModel dailyModel = UI.readOnlyModel("Ngày", "Thực thu");
+    private final JTable dailyTable = UI.table(dailyModel);
     private final JLabel dvEmpty = UI.muted(" ");
     private final JLabel ptEmpty = UI.muted(" ");
 
@@ -73,6 +77,12 @@ public final class BaoCaoPanel extends BasePanel {
         tfDen.setText(hom.format(D));
         tfTu.putClientProperty("JTextField.placeholderText", "dd/MM/yyyy");
         tfDen.putClientProperty("JTextField.placeholderText", "dd/MM/yyyy");
+        dailyTable.setRowHeight(30);
+        dailyTable.getColumnModel().getColumn(0).setPreferredWidth(130);
+        dailyTable.getColumnModel().getColumn(1).setPreferredWidth(180);
+        DefaultTableCellRenderer dailyRight = new DefaultTableCellRenderer();
+        dailyRight.setHorizontalAlignment(SwingConstants.RIGHT);
+        dailyTable.getColumnModel().getColumn(1).setCellRenderer(dailyRight);
 
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         bar.setOpaque(false);
@@ -102,18 +112,44 @@ public final class BaoCaoPanel extends BasePanel {
         GridBagConstraints g = new GridBagConstraints();
         g.gridx = 0;
         g.weightx = 1;
+        g.weighty = 0;
+        g.anchor = GridBagConstraints.NORTHWEST;
         g.fill = GridBagConstraints.HORIZONTAL;
         g.insets = new java.awt.Insets(0, 0, 18, 0);
-        g.gridy = 0; content.add(bar, g);
+        RoundedPanel filterCard = new RoundedPanel();
+        filterCard.setLayout(new BorderLayout());
+        filterCard.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
+        filterCard.add(bar, BorderLayout.CENTER);
+        g.gridy = 0; content.add(filterCard, g);
         g.gridy = 1; content.add(stats, g);
-        g.gridy = 2; content.add(chartCard(), g);
-        g.gridy = 3; g.insets = new java.awt.Insets(0, 0, 0, 0);
-        JPanel two = new JPanel(new GridLayout(1, 2, 16, 0));
-        two.setOpaque(false);
-        two.add(listCard("Cơ cấu doanh thu theo dịch vụ", dvModel, dvEmpty));
-        two.add(listCard("Nhóm phụ tùng tiêu thụ", ptModel, ptEmpty));
-        content.add(two, g);
-        body.add(content, BorderLayout.NORTH);
+        g.gridy = 2;
+        JPanel revenueRow = new JPanel(new GridLayout(1, 2, 16, 0));
+        revenueRow.setOpaque(false);
+        revenueRow.add(chartCard());
+        revenueRow.add(dailyCard());
+        content.add(revenueRow, g);
+
+		g.gridy = 3;
+		g.insets = new java.awt.Insets(0, 0, 0, 0);
+		
+		JPanel two = new JPanel(new GridLayout(1, 2, 16, 0));
+		two.setOpaque(false);
+		two.add(listCard("Cơ cấu doanh thu theo dịch vụ", dvModel, dvEmpty));
+		two.add(listCard("Nhóm phụ tùng tiêu thụ", ptModel, ptEmpty));
+		
+		content.add(two, g);
+		
+		// Dòng đệm hấp thụ chiều cao dư ở phía dưới
+		g.gridy = 4;
+		g.weighty = 1.0;
+		g.fill = GridBagConstraints.BOTH;
+		
+		JPanel bottomSpace = new JPanel();
+		bottomSpace.setOpaque(false);
+		content.add(bottomSpace, g);
+		
+		// Cho content chiếm vùng hiển thị và neo các thành phần lên trên
+		body.add(content, BorderLayout.CENTER);	
     }
 
     @Override
@@ -164,6 +200,11 @@ public final class BaoCaoPanel extends BasePanel {
         }
         chart.setData(nhan, gt, ghi);
 
+        dailyModel.setRowCount(0);
+        for (Cot day : r.thucThuTheoNgay()) {
+            dailyModel.addRow(new Object[]{Fmt.date(LocalDate.parse(day.nhan())), Fmt.money(day.giaTri())});
+        }
+
         fill(dvModel, r.dichVu(), dvEmpty, "Chưa có hóa đơn nào có dịch vụ trong kỳ này.");
         fill(ptModel, r.phuTung(), ptEmpty, "Chưa có phụ tùng nào được bán trong kỳ này.");
         revalidate();
@@ -191,6 +232,26 @@ public final class BaoCaoPanel extends BasePanel {
         head.add(chartSub, BorderLayout.EAST);
         card.add(head, BorderLayout.NORTH);
         card.add(chart, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JComponent dailyCard() {
+        RoundedPanel card = new RoundedPanel();
+        card.setLayout(new BorderLayout(0, 10));
+        card.setBorder(BorderFactory.createEmptyBorder(18, 20, 16, 20));
+        JPanel header = new JPanel(new BorderLayout(0, 4));
+        header.setOpaque(false);
+        header.add(UI.h2("Thực thu chi tiết theo ngày"), BorderLayout.NORTH);
+        header.add(UI.muted("Số tiền đã thanh toán trong từng ngày của kỳ đã chọn."), BorderLayout.SOUTH);
+        card.add(header, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(dailyTable);
+        scroll.setBorder(null);
+        scroll.setPreferredSize(new java.awt.Dimension(100, 220));
+        scroll.setMinimumSize(new java.awt.Dimension(0, 160));
+        scroll.getViewport().setBackground(Color.WHITE);
+        scroll.getVerticalScrollBar().setUnitIncrement(24);
+        card.add(scroll, BorderLayout.CENTER);
         return card;
     }
 

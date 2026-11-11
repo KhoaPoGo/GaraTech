@@ -66,7 +66,6 @@ public final class DashBoardPanel extends BasePanel {
 
     private final JPanel alertBody = new JPanel();
     private final JLabel lbCapNhat = UI.label(" ", Font.PLAIN, 11, Theme.MUTED);
-    private final JButton btnKiemTra = UI.secondaryButton("Kiểm tra chất lượng");
 
     public DashBoardPanel() {
         super("Điều hành gara", "Tổng quan quản lý", "Nắm bắt hoạt động gara và các công việc cần ưu tiên trong ngày.");
@@ -133,7 +132,6 @@ public final class DashBoardPanel extends BasePanel {
 
         fillAlerts(d);
         fillActive(d.phieuDangHoatDong());
-        btnKiemTra.setText("Kiểm tra chất lượng · " + d.choKiemTra() + " xe");
         lbCapNhat.setText("Cập nhật lúc " + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")));
         revalidate();
         repaint();
@@ -302,12 +300,13 @@ public final class DashBoardPanel extends BasePanel {
     private JComponent shortcutRow() {
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
         row.setOpaque(false);
-        btnKiemTra.addActionListener(e -> Navigator.go(Screen.KIEM_TRA_CL));
         JButton b = UI.secondaryButton("Báo cáo trong ngày");
         b.addActionListener(e -> Navigator.go(Screen.BAO_CAO));
         JButton c = UI.secondaryButton("Quản lý nhân sự");
         c.addActionListener(e -> Navigator.go(Screen.DICH_VU_NHAN_SU));
-        row.add(btnKiemTra); row.add(b); row.add(c);
+        JButton d = UI.secondaryButton("Quản lý dịch vụ");
+        d.addActionListener(e -> Navigator.go(Screen.QUAN_LY_DICH_VU));
+        row.add(b); row.add(c); row.add(d);
         return row;
     }
 

@@ -25,7 +25,8 @@ public final class BaoCaoService {
 
     /** Số liệu báo cáo cho một khoảng ngày. */
     public record BaoCao(long thucThu, long conChoThu, long soHoaDon, long soPhieuHoanThanh,
-                         List<Cot> bieuDo, String donViCot, List<DongThongKe> dichVu, List<DongThongKe> phuTung) {}
+                         List<Cot> bieuDo, String donViCot, List<Cot> thucThuTheoNgay,
+                         List<DongThongKe> dichVu, List<DongThongKe> phuTung) {}
 
     public record DashboardData(long tiepNhanHomNay, long phieuChoXuLy, long dangSua, long quaHan,
                                 long hoanThanhHomNay, long daBanGiaoHomNay, long choKiemTra,
@@ -38,10 +39,14 @@ public final class BaoCaoService {
         long ngay = ChronoUnit.DAYS.between(from, to) + 1;
         if (ngay > 366) throw new BusinessException("Chỉ xem được tối đa 366 ngày mỗi lần. Hãy chọn khoảng ngắn hơn.");
         Map<LocalDate, Long> theoNgay = dao.thucThuTheoNgay(from, to);
+        List<Cot> daily = new ArrayList<>();
+        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
+            daily.add(new Cot(d.toString(), theoNgay.getOrDefault(d, 0L)));
+        }
         return new BaoCao(dao.thucThu(from, to), dao.conChoThu(from, to), dao.soHoaDon(from, to),
                 dao.soPhieuHoanThanh(from, to), gom(from, to, theoNgay),
                 ngay <= 14 ? "ngày" : ngay <= 92 ? "tuần" : "tháng",
-                dao.coCauDichVu(from, to), dao.nhomPhuTung(from, to));
+                daily, dao.coCauDichVu(from, to), dao.nhomPhuTung(from, to));
     }
 
     /** Gom doanh thu theo ngày (<= 14 ngày), theo tuần (<= 92 ngày) hoặc theo tháng. */

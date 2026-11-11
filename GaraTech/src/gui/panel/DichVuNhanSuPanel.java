@@ -46,7 +46,7 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * Màn "Dịch vụ & nhân sự" (quản lý): 4 tab — Dịch vụ & đơn giá / Nhân viên / Tài khoản / Bảng phân quyền.
+ * Màn "Nhân sự & tài khoản" (quản lý): nhân viên, tài khoản và bảng phân quyền.
  * Không xóa dữ liệu: dịch vụ chuyển "Ngừng cung cấp", nhân viên "Nghỉ việc", tài khoản "Đang khóa".
  */
 public final class DichVuNhanSuPanel extends BasePanel {
@@ -55,16 +55,14 @@ public final class DichVuNhanSuPanel extends BasePanel {
     private final DichVuService dvService = new DichVuService();
     private final NhanSuService nsService = new NhanSuService();
 
-    private final DichVuTab dichVuTab = new DichVuTab();
     private final NhanVienTab nhanVienTab = new NhanVienTab();
     private final TaiKhoanTab taiKhoanTab = new TaiKhoanTab();
 
     public DichVuNhanSuPanel() {
-        super("Quản trị", "Dịch vụ & nhân sự",
-                "Quản lý bảng giá dịch vụ, hồ sơ nhân viên, tài khoản đăng nhập và phân quyền.");
+        super("Quản trị", "Nhân sự & tài khoản",
+                "Quản lý hồ sơ nhân viên, tài khoản đăng nhập và phân quyền theo vai trò.");
         JTabbedPane tabs = new JTabbedPane();
         tabs.setFont(Theme.font(Font.BOLD, 13));
-        tabs.addTab("Dịch vụ & đơn giá", dichVuTab);
         tabs.addTab("Nhân viên", nhanVienTab);
         tabs.addTab("Tài khoản", taiKhoanTab);
         tabs.addTab("Bảng phân quyền", new PhanQuyenTab());
@@ -75,7 +73,6 @@ public final class DichVuNhanSuPanel extends BasePanel {
 
     @Override
     public void onShow() {
-        dichVuTab.reload();
         nhanVienTab.reload();
         taiKhoanTab.reload();
     }
