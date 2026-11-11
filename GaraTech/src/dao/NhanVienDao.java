@@ -110,8 +110,8 @@ public class NhanVienDao {
 
     /** Số phiếu sửa chữa chưa kết thúc đang giao cho kỹ thuật viên này (chặn đổi vai trò / cho nghỉ khi còn việc). */
     public int demPhieuDangGiao(String maKTV) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM PhieuSuaChua WHERE maKTV = ?"
-                + " AND trangThai IN (N'Đã xác nhận', N'Đang sửa chữa', N'Chờ kiểm tra')";
+        String sql = "SELECT COUNT(*) FROM PhieuTiepNhanSuaChua WHERE maNVKyThuat = ?"
+                + " AND trangThai IN ('CHO_SUA', 'DANG_SUA', 'CHO_LINH_KIEN')";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, maKTV);
             try (ResultSet rs = ps.executeQuery()) {

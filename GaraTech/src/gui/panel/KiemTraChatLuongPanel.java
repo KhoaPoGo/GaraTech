@@ -54,6 +54,7 @@ public final class KiemTraChatLuongPanel extends BasePanel {
     private final JCheckBox ckRoRi = new JCheckBox("Không rò rỉ nhớt / dầu / nước làm mát");
     private final JCheckBox ckVeSinh = new JCheckBox("Đã vệ sinh xe, trả đủ đồ cho khách");
     private final JTextArea qlNote = new JTextArea(3, 20);
+    private final JButton btnRefresh = UI.secondaryButton("Làm mới");
     private final JButton btnDuyet = UI.primaryButton("Duyệt hoàn thành");
     private final JButton btnTraVe = UI.secondaryButton("Trả về làm lại");
 
@@ -64,19 +65,12 @@ public final class KiemTraChatLuongPanel extends BasePanel {
     public KiemTraChatLuongPanel() {
         super("Điều hành gara", "Kiểm tra chất lượng",
                 "Đối chiếu kết quả kỹ thuật viên báo với kiểm tra thực tế trước khi xác nhận xe hoàn thành.");
-        JButton refresh = UI.secondaryButton("Làm mới");
-        refresh.addActionListener(e -> reload());
-        actions.add(refresh);
+        actions.add(btnRefresh);
 
         listTable.setRowHeight(52);
         listTable.setFocusable(true);
         listTable.getColumnModel().getColumn(3).setCellRenderer(new ProgressCellRenderer());
         listTable.getColumnModel().getColumn(0).setPreferredWidth(240);
-        listTable.getSelectionModel().addListSelectionListener(e -> {
-            if (e.getValueIsAdjusting()) return;
-            int r = listTable.getSelectedRow();
-            if (r >= 0 && r < phieu.size()) choose(phieu.get(r));
-        });
 
         RoundedPanel listCard = new RoundedPanel();
         listCard.setLayout(new BorderLayout(0, 8));
@@ -103,13 +97,8 @@ public final class KiemTraChatLuongPanel extends BasePanel {
         content.add(two, BorderLayout.CENTER);
         body.add(content, BorderLayout.NORTH);
 
-        Runnable upd = this::updateButtons;
-        ckChayThu.addActionListener(e -> upd.run());
-        ckRoRi.addActionListener(e -> upd.run());
-        ckVeSinh.addActionListener(e -> upd.run());
-        btnDuyet.addActionListener(e -> duyet());
-        btnTraVe.addActionListener(e -> traVe());
         clearDetail();
+        initEvents();
     }
 
     private JComponent lbTitleBar() {
@@ -283,5 +272,23 @@ public final class KiemTraChatLuongPanel extends BasePanel {
             selectedId = null;
             reload();
         });
+    }
+
+    // ======================================================================
+    // XỬ LÝ SỰ KIỆN Ở CUỐI CÙNG THEO QUY TẮC BẮT BUỘC
+    // ======================================================================
+    private void initEvents() {
+        btnRefresh.addActionListener(e -> reload());
+        listTable.getSelectionModel().addListSelectionListener(e -> {
+            if (e.getValueIsAdjusting()) return;
+            int r = listTable.getSelectedRow();
+            if (r >= 0 && r < phieu.size()) choose(phieu.get(r));
+        });
+        Runnable upd = this::updateButtons;
+        ckChayThu.addActionListener(e -> upd.run());
+        ckRoRi.addActionListener(e -> upd.run());
+        ckVeSinh.addActionListener(e -> upd.run());
+        btnDuyet.addActionListener(e -> duyet());
+        btnTraVe.addActionListener(e -> traVe());
     }
 }

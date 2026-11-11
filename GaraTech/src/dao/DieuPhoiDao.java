@@ -1,7 +1,7 @@
 package dao;
 
 import connectDB.ConnectDB;
-import enums.TrangThaiPhieuSuaChua;
+import enums.TrangThaiPhieu;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -13,26 +13,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Truy vấn phiếu sửa chữa phục vụ quản lý: Điều phối & tiến độ, Kiểm tra chất lượng, Dashboard.
- * (Tách khỏi PhieuSuaChuaDao của nhóm tiếp nhận để hai bên không sửa chung một file.)
+ * Truy vấn phiếu tiếp nhận - sửa chữa phục vụ quản lý: Điều phối & tiến độ, Kiểm tra chất lượng, Dashboard.
  */
 public class DieuPhoiDao {
 
     /** Một phiếu sửa chữa kèm thông tin xe, khách, kỹ thuật viên và tiến độ hạng mục. */
-    public record PhieuCard(String maPhieuSC, TrangThaiPhieuSuaChua trangThai, String bienSo, String tenXe,
+    public record PhieuCard(String maPhieuSC, TrangThaiPhieu trangThai, String bienSo, String tenXe,
                             String tenKhach, String maKTV, String tenKTV, LocalDateTime duKien,
                             LocalDateTime batDau, String yeuCau, int tongHangMuc, int hangMucXong) {
         /** Tiến độ 0–100 theo số hạng mục đã hoàn thành. */
         public int tienDo() {
-            if (trangThai == TrangThaiPhieuSuaChua.CHO_KIEM_TRA || trangThai == TrangThaiPhieuSuaChua.HOAN_THANH
-                    || trangThai == TrangThaiPhieuSuaChua.DA_BAN_GIAO) return 100;
+            if (trangThai == TrangThaiPhieu.HOAN_TAT) return 100;
             return tongHangMuc == 0 ? 0 : hangMucXong * 100 / tongHangMuc;
         }
 
         /** Đang làm dở mà đã quá hạn dự kiến. */
         public boolean quaHan(LocalDateTime now) {
             return duKien != null && duKien.isBefore(now)
-                    && (trangThai == TrangThaiPhieuSuaChua.DA_XAC_NHAN || trangThai == TrangThaiPhieuSuaChua.DANG_SUA_CHUA);
+                    && (trangThai == TrangThaiPhieu.CHO_SUA || trangThai == TrangThaiPhieu.DANG_SUA || trangThai == TrangThaiPhieu.CHO_LINH_KIEN);
         }
     }
 
@@ -45,23 +43,27 @@ public class DieuPhoiDao {
     public record HangMuc(String ten, String loai, int soLuong, String trangThai, boolean phatSinh) {}
 
     private static final String SELECT = """
-            SELECT p.maPhieuSC, p.trangThai, p.maKTV, kt.hoTen AS tenKTV, p.thoiGianDuKien, p.thoiGianBatDau,
-                   tn.bienSo, x.hangXe, x.model, kh.hoTen AS tenKH, tn.yeuCauKhachHang,
-                   (SELECT COUNT(*) FROM HangMucSuaChua h WHERE h.maPhieuSC = p.maPhieuSC AND h.trangThai <> N'Từ chối') AS tongHM,
-                   (SELECT COUNT(*) FROM HangMucSuaChua h WHERE h.maPhieuSC = p.maPhieuSC AND h.trangThai = N'Hoàn thành') AS xongHM
-            FROM PhieuSuaChua p
-            JOIN PhieuTiepNhan tn ON tn.maPhieuTN = p.maPhieuTN
-            JOIN Xe x ON x.bienSo = tn.bienSo
-            JOIN KhachHang kh ON kh.maKH = tn.maKH
-            LEFT JOIN NhanVien kt ON kt.maNV = p.maKTV
+            SELECT p.maPhieu AS maPhieuSC, p.trangThai, p.maNVKyThuat AS maKTV, kt.hoTen AS tenKTV,
+                   p.thoiGianHenTra AS thoiGianDuKien, p.thoiGianBatDau,
+                   p.bienSo, x.hangXe, x.model, kh.hoTen AS tenKH, p.yeuCauBanDau AS yeuCauKhachHang,
+                   (SELECT COUNT(*) FROM ChiTietDichVu dv WHERE dv.maPhieu = p.maPhieu) +
+                   (SELECT COUNT(*) FROM ChiTietLinhKien lk WHERE lk.maPhieu = p.maPhieu) AS tongHM,
+                   CASE WHEN p.trangThai = 'HOAN_TAT' THEN
+                        (SELECT COUNT(*) FROM ChiTietDichVu dv WHERE dv.maPhieu = p.maPhieu) +
+                        (SELECT COUNT(*) FROM ChiTietLinhKien lk WHERE lk.maPhieu = p.maPhieu)
+                   ELSE 0 END AS xongHM
+            FROM PhieuTiepNhanSuaChua p
+            JOIN Xe x ON x.bienSo = p.bienSo
+            JOIN KhachHang kh ON kh.maKH = x.maKH
+            LEFT JOIN NhanVien kt ON kt.maNV = p.maNVKyThuat
             """;
 
-    private static final String ORDER = " ORDER BY CASE WHEN p.thoiGianDuKien IS NULL THEN 1 ELSE 0 END, p.thoiGianDuKien, p.maPhieuSC";
+    private static final String ORDER = " ORDER BY CASE WHEN p.thoiGianHenTra IS NULL THEN 1 ELSE 0 END, p.thoiGianHenTra, p.maPhieu";
 
     private static LocalDateTime ldt(Timestamp t) { return t == null ? null : t.toLocalDateTime(); }
 
     private static PhieuCard map(ResultSet rs) throws SQLException {
-        return new PhieuCard(rs.getString("maPhieuSC"), TrangThaiPhieuSuaChua.fromLabel(rs.getString("trangThai")),
+        return new PhieuCard(rs.getString("maPhieuSC"), TrangThaiPhieu.fromDb(rs.getString("trangThai")),
                 rs.getString("bienSo"), rs.getString("hangXe") + " " + rs.getString("model"), rs.getString("tenKH"),
                 rs.getString("maKTV"), rs.getString("tenKTV"), ldt(rs.getTimestamp("thoiGianDuKien")),
                 ldt(rs.getTimestamp("thoiGianBatDau")), rs.getString("yeuCauKhachHang"),
@@ -73,12 +75,12 @@ public class DieuPhoiDao {
     }
 
     /** Các phiếu có trạng thái nằm trong danh sách, đã sắp theo hạn hoàn thành; limit <= 0 là lấy hết. */
-    public List<PhieuCard> findByTrangThai(int limit, TrangThaiPhieuSuaChua... trangThai) throws SQLException {
+    public List<PhieuCard> findByTrangThai(int limit, TrangThaiPhieu... trangThai) throws SQLException {
         String sql = (limit > 0 ? SELECT.replaceFirst("SELECT ", "SELECT TOP " + limit + " ") : SELECT)
                 + " WHERE p.trangThai IN " + inList(trangThai.length) + ORDER;
         List<PhieuCard> out = new ArrayList<>();
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            for (int i = 0; i < trangThai.length; i++) ps.setNString(i + 1, trangThai[i].label());
+            for (int i = 0; i < trangThai.length; i++) ps.setString(i + 1, trangThai[i].name());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) out.add(map(rs));
             }
@@ -88,7 +90,7 @@ public class DieuPhoiDao {
 
     public PhieuCard findById(String maPhieu) throws SQLException {
         try (Connection c = ConnectDB.getConnection();
-             PreparedStatement ps = c.prepareStatement(SELECT + " WHERE p.maPhieuSC = ?")) {
+             PreparedStatement ps = c.prepareStatement(SELECT + " WHERE p.maPhieu = ?")) {
             ps.setString(1, maPhieu);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? map(rs) : null;
@@ -99,8 +101,8 @@ public class DieuPhoiDao {
     public List<KtvLoad> findKtvVaTaiTrong() throws SQLException {
         String sql = """
                 SELECT nv.maNV, nv.hoTen,
-                       (SELECT COUNT(*) FROM PhieuSuaChua p WHERE p.maKTV = nv.maNV
-                          AND p.trangThai IN (N'Đã xác nhận', N'Đang sửa chữa')) AS soPhieu
+                       (SELECT COUNT(*) FROM PhieuTiepNhanSuaChua p WHERE p.maNVKyThuat = nv.maNV
+                          AND p.trangThai IN ('CHO_SUA', 'DANG_SUA', 'CHO_LINH_KIEN')) AS soPhieu
                 FROM NhanVien nv
                 WHERE nv.vaiTro = N'Kỹ thuật viên' AND nv.dangLam = 1
                 ORDER BY nv.hoTen
@@ -126,11 +128,25 @@ public class DieuPhoiDao {
     }
 
     public List<HangMuc> findHangMuc(String maPhieu) throws SQLException {
-        String sql = "SELECT tenHangMuc, loaiHangMuc, soLuong, trangThai, laPhatSinh FROM HangMucSuaChua"
-                + " WHERE maPhieuSC = ? ORDER BY maHangMuc";
+        String sql = """
+                SELECT dv.tenDichVu AS tenHangMuc, N'Dịch vụ' AS loaiHangMuc, cdv.soLuong,
+                       N'Hoàn thành' AS trangThai,
+                       CAST(0 AS BIT) AS laPhatSinh
+                FROM ChiTietDichVu cdv
+                JOIN DichVu dv ON dv.maDichVu = cdv.maDichVu
+                WHERE cdv.maPhieu = ?
+                UNION ALL
+                SELECT pt.tenPhuTung AS tenHangMuc, N'Phụ tùng' AS loaiHangMuc, clk.soLuong,
+                       N'Hoàn thành' AS trangThai,
+                       CAST(0 AS BIT) AS laPhatSinh
+                FROM ChiTietLinhKien clk
+                JOIN PhuTung pt ON pt.maPhuTung = clk.maPhuTung
+                WHERE clk.maPhieu = ?
+                """;
         List<HangMuc> out = new ArrayList<>();
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, maPhieu);
+            ps.setString(2, maPhieu);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) out.add(new HangMuc(rs.getString("tenHangMuc"), rs.getString("loaiHangMuc"),
                         rs.getInt("soLuong"), rs.getString("trangThai"), rs.getBoolean("laPhatSinh")));
@@ -139,9 +155,9 @@ public class DieuPhoiDao {
         return out;
     }
 
-    /** Số hạng mục chưa xong (không tính hạng mục bị từ chối). */
+    /** Số hạng mục chưa xong. */
     public int demHangMucChuaXong(String maPhieu) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM HangMucSuaChua WHERE maPhieuSC = ? AND trangThai NOT IN (N'Hoàn thành', N'Từ chối')";
+        String sql = "SELECT CASE WHEN trangThai = 'HOAN_TAT' THEN 0 ELSE 0 END FROM PhieuTiepNhanSuaChua WHERE maPhieu = ?";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, maPhieu);
             try (ResultSet rs = ps.executeQuery()) {
@@ -150,9 +166,9 @@ public class DieuPhoiDao {
         }
     }
 
-    /** Phụ tùng đã xuất kho cho phiếu này chưa (nếu rồi thì không cho hủy phiếu). */
+    /** Phụ tùng đã xuất kho cho phiếu này chưa. */
     public boolean daXuatKho(String maPhieu) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM PhieuXuatKho WHERE maPhieuSC = ? AND trangThai = N'Đã xuất kho'";
+        String sql = "SELECT COUNT(*) FROM PhieuXuatKho WHERE maPhieu = ? AND trangThai = N'Đã xuất kho'";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, maPhieu);
             try (ResultSet rs = ps.executeQuery()) {
@@ -163,7 +179,7 @@ public class DieuPhoiDao {
 
     public String findGhiChuKyThuat(String maPhieu) throws SQLException {
         try (Connection c = ConnectDB.getConnection();
-             PreparedStatement ps = c.prepareStatement("SELECT ghiChuKyThuat FROM PhieuSuaChua WHERE maPhieuSC = ?")) {
+             PreparedStatement ps = c.prepareStatement("SELECT ghiChuKyThuat FROM PhieuTiepNhanSuaChua WHERE maPhieu = ?")) {
             ps.setString(1, maPhieu);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? rs.getString(1) : null;
@@ -173,10 +189,10 @@ public class DieuPhoiDao {
 
     // ---------------------------------------------------------------- cập nhật (luôn kèm điều kiện trạng thái cũ)
 
-    /** Phân công kỹ thuật viên + đặt hạn. Trả về 0 nếu phiếu đã đổi trạng thái trong lúc đó. */
+    /** Phân công kỹ thuật viên + đặt hạn. Trả về 0 nếu phiếu đã hoàn tất hoặc không tồn tại. */
     public int phanCong(String maPhieu, String maKTV, LocalDateTime duKien) throws SQLException {
-        String sql = "UPDATE PhieuSuaChua SET maKTV = ?, thoiGianDuKien = ? WHERE maPhieuSC = ?"
-                + " AND trangThai IN (N'Đã xác nhận', N'Đang sửa chữa')";
+        String sql = "UPDATE PhieuTiepNhanSuaChua SET maNVKyThuat = ?, thoiGianHenTra = ? WHERE maPhieu = ?"
+                + " AND trangThai <> 'HOAN_TAT'";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, maKTV);
             ps.setTimestamp(2, Timestamp.valueOf(duKien));
@@ -186,29 +202,28 @@ public class DieuPhoiDao {
     }
 
     public int batDauSua(String maPhieu) throws SQLException {
-        String sql = "UPDATE PhieuSuaChua SET trangThai = N'Đang sửa chữa', thoiGianBatDau = SYSDATETIME()"
-                + " WHERE maPhieuSC = ? AND trangThai = N'Đã xác nhận' AND maKTV IS NOT NULL";
+        String sql = "UPDATE PhieuTiepNhanSuaChua SET trangThai = 'DANG_SUA', thoiGianBatDau = COALESCE(thoiGianBatDau, SYSDATETIME())"
+                + " WHERE maPhieu = ? AND trangThai = 'CHO_SUA' AND maNVKyThuat IS NOT NULL";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, maPhieu);
             return ps.executeUpdate();
         }
     }
 
-    public int huy(String maPhieu, TrangThaiPhieuSuaChua tuTrangThai, String lyDo) throws SQLException {
-        String sql = "UPDATE PhieuSuaChua SET trangThai = N'Đã hủy', lyDoHuy = ? WHERE maPhieuSC = ? AND trangThai = ?";
+    public int huy(String maPhieu, TrangThaiPhieu tuTrangThai, String lyDo) throws SQLException {
+        String sql = "UPDATE PhieuTiepNhanSuaChua SET ghiChuKyThuat = ? WHERE maPhieu = ? AND trangThai <> 'HOAN_TAT'";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setNString(1, lyDo);
+            ps.setNString(1, "Hủy: " + lyDo);
             ps.setString(2, maPhieu);
-            ps.setNString(3, tuTrangThai.label());
             return ps.executeUpdate();
         }
     }
 
-    /** Chờ kiểm tra -> Hoàn thành, ghi thời điểm hoàn thành (không sớm hơn thời điểm bắt đầu) và ghi chú. */
+    /** Chờ kiểm tra / Đang sửa -> Hoàn tất, ghi thời điểm hoàn thành và ghi chú. */
     public int hoanThanh(String maPhieu, String ghiChuMoi) throws SQLException {
-        String sql = "UPDATE PhieuSuaChua SET trangThai = N'Hoàn thành', ghiChuKyThuat = ?,"
-                + " thoiGianHoanThanh = CASE WHEN thoiGianBatDau > SYSDATETIME() THEN thoiGianBatDau ELSE SYSDATETIME() END"
-                + " WHERE maPhieuSC = ? AND trangThai = N'Chờ kiểm tra'";
+        String sql = "UPDATE PhieuTiepNhanSuaChua SET trangThai = 'HOAN_TAT', ghiChuKyThuat = ?,"
+                + " thoiGianHoanThanh = CASE WHEN thoiGianBatDau IS NOT NULL AND thoiGianBatDau > SYSDATETIME() THEN thoiGianBatDau ELSE SYSDATETIME() END"
+                + " WHERE maPhieu = ? AND trangThai IN ('DANG_SUA', 'CHO_SUA', 'CHO_LINH_KIEN')";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             if (ghiChuMoi == null) ps.setNull(1, java.sql.Types.NVARCHAR); else ps.setNString(1, ghiChuMoi);
             ps.setString(2, maPhieu);
@@ -216,10 +231,10 @@ public class DieuPhoiDao {
         }
     }
 
-    /** Chờ kiểm tra -> Đang sửa chữa (trả về làm lại), ghi lý do vào ghi chú kỹ thuật. */
+    /** Trả về làm lại, ghi lý do vào ghi chú kỹ thuật. */
     public int traVeLamLai(String maPhieu, String ghiChuMoi) throws SQLException {
-        String sql = "UPDATE PhieuSuaChua SET trangThai = N'Đang sửa chữa', ghiChuKyThuat = ?, thoiGianHoanThanh = NULL"
-                + " WHERE maPhieuSC = ? AND trangThai = N'Chờ kiểm tra'";
+        String sql = "UPDATE PhieuTiepNhanSuaChua SET trangThai = 'DANG_SUA', ghiChuKyThuat = ?, thoiGianHoanThanh = NULL"
+                + " WHERE maPhieu = ? AND trangThai <> 'HOAN_TAT'";
         try (Connection c = ConnectDB.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setNString(1, ghiChuMoi);
             ps.setString(2, maPhieu);

@@ -5,7 +5,7 @@ import dao.BaoCaoDao.CanhBaoKho;
 import dao.BaoCaoDao.DongThongKe;
 import dao.DieuPhoiDao;
 import dao.DieuPhoiDao.PhieuCard;
-import enums.TrangThaiPhieuSuaChua;
+import enums.TrangThaiPhieu;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -79,13 +79,12 @@ public final class BaoCaoService {
         Map<String, Long> theoTT = dao.demPhieuTheoTrangThai();
         Map<String, Long> xongHom = dao.demHoanThanhTrongNgay(hom);
         return new DashboardData(dao.demTiepNhanTrongNgay(hom), dao.demPhieuTiepNhanChoXuLy(),
-                theoTT.getOrDefault(TrangThaiPhieuSuaChua.DANG_SUA_CHUA.label(), 0L), dao.demPhieuQuaHan(LocalDateTime.now()),
-                xongHom.getOrDefault(TrangThaiPhieuSuaChua.HOAN_THANH.label(), 0L),
-                xongHom.getOrDefault(TrangThaiPhieuSuaChua.DA_BAN_GIAO.label(), 0L),
-                theoTT.getOrDefault(TrangThaiPhieuSuaChua.CHO_KIEM_TRA.label(), 0L),
+                theoTT.getOrDefault("DANG_SUA", 0L), dao.demPhieuQuaHan(LocalDateTime.now()),
+                xongHom.getOrDefault("HOAN_TAT", 0L),
+                0L,
+                theoTT.getOrDefault("CHO_LINH_KIEN", 0L),
                 ngay.getOrDefault(hom, 0L), dao.conChoThu(LocalDate.of(2000, 1, 1), hom),
                 bay, tong7, truoc, tu, hom, dao.canhBaoTonKho(3),
-                phieuDao.findByTrangThai(6, TrangThaiPhieuSuaChua.DA_XAC_NHAN, TrangThaiPhieuSuaChua.DANG_SUA_CHUA,
-                        TrangThaiPhieuSuaChua.CHO_KIEM_TRA));
+                phieuDao.findByTrangThai(6, TrangThaiPhieu.CHO_SUA, TrangThaiPhieu.DANG_SUA, TrangThaiPhieu.CHO_LINH_KIEN));
     }
 }

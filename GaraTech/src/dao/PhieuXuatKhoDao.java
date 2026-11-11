@@ -236,9 +236,9 @@ public class PhieuXuatKhoDao {
         }
 
         return ConnectDB.inTransaction(c -> {
-            // Bảo đảm người gửi là KTV đang được phân công cho phiếu sửa chữa này.
+            // Bảo đảm người gửi là KTV đang được phân công cho phiếu tiếp nhận - sửa chữa này.
             String sqlCheckTechnician =
-                    "SELECT maKTV FROM PhieuSuaChua WHERE maPhieuSC = ?";
+                    "SELECT maNVKyThuat AS maKTV FROM PhieuTiepNhanSuaChua WHERE maPhieu = ?";
             try (PreparedStatement ps = c.prepareStatement(sqlCheckTechnician)) {
                 ps.setString(1, maPhieuSC);
                 try (ResultSet rs = ps.executeQuery()) {

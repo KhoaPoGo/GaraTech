@@ -3,7 +3,7 @@ package gui.panel;
 import bus.DieuPhoiService;
 import dao.DieuPhoiDao.KtvLoad;
 import dao.DieuPhoiDao.PhieuCard;
-import enums.TrangThaiPhieuSuaChua;
+import enums.TrangThaiPhieu;
 import gui.Navigator;
 import gui.Screen;
 import gui.component.BasePanel;
@@ -63,6 +63,7 @@ public final class DieuPhoiPanel extends BasePanel {
     private final JTextArea lbInfo = new JTextArea();
     private final JComboBox<KtvLoad> cbKtv = new JComboBox<>();
     private final JTextField tfHan = new JTextField(16);
+    private final JButton btnRefresh = UI.secondaryButton("Làm mới");
     private final JButton btnLuu = UI.primaryButton("Lưu phân công");
     private final JButton btnBatDau = UI.secondaryButton("Bắt đầu sửa");
     private final JButton btnHuy = UI.secondaryButton("Hủy phiếu");
@@ -75,9 +76,7 @@ public final class DieuPhoiPanel extends BasePanel {
     public DieuPhoiPanel() {
         super("Điều hành gara", "Điều phối & tiến độ",
                 "Theo dõi phiếu sửa chữa theo trạng thái, phân công kỹ thuật viên và kiểm soát hạn hoàn thành.");
-        JButton refresh = UI.secondaryButton("Làm mới");
-        refresh.addActionListener(e -> reload());
-        actions.add(refresh);
+        actions.add(btnRefresh);
 
         board.setOpaque(false);
         JPanel top = new JPanel(new BorderLayout(0, 8));
@@ -100,11 +99,8 @@ public final class DieuPhoiPanel extends BasePanel {
             }
         });
         tfHan.putClientProperty("JTextField.placeholderText", "dd/MM/yyyy HH:mm");
-        btnLuu.addActionListener(e -> luuPhanCong());
-        btnBatDau.addActionListener(e -> batDau());
-        btnHuy.addActionListener(e -> huy());
-        btnKiemTra.addActionListener(e -> Navigator.go(Screen.KIEM_TRA_CL));
         showDetail(null);
+        initEvents();
     }
 
     @Override
@@ -134,7 +130,7 @@ public final class DieuPhoiPanel extends BasePanel {
         LocalDateTime now = LocalDateTime.now();
         long quaHan = phieu.stream().filter(p -> p.quaHan(now)).count();
         warn.setText(quaHan > 0 ? "⚠ " + quaHan + " phiếu đã quá hạn hoàn thành dự kiến" : " ");
-        for (TrangThaiPhieuSuaChua tt : DieuPhoiService.CAC_COT) {
+        for (TrangThaiPhieu tt : DieuPhoiService.CAC_COT) {
             List<PhieuCard> ds = phieu.stream().filter(p -> p.trangThai() == tt).toList();
             board.add(column(tt, ds, now));
         }
@@ -143,7 +139,7 @@ public final class DieuPhoiPanel extends BasePanel {
         revalidate();
     }
 
-    private JComponent column(TrangThaiPhieuSuaChua tt, List<PhieuCard> ds, LocalDateTime now) {
+    private JComponent column(TrangThaiPhieu tt, List<PhieuCard> ds, LocalDateTime now) {
         RoundedPanel col = new RoundedPanel(14, new Color(0xEBEEF4));
         col.setLayout(new BorderLayout(0, 8));
         col.setBorder(BorderFactory.createEmptyBorder(12, 10, 12, 10));
@@ -188,7 +184,7 @@ public final class DieuPhoiPanel extends BasePanel {
         if (p.duKien() != null) {
             c.add(left(UI.label("Hạn " + Fmt.dateTime(p.duKien()), Font.PLAIN, 11, p.quaHan(now) ? Theme.DANGER : Theme.MUTED)));
         }
-        if (p.trangThai() == TrangThaiPhieuSuaChua.DANG_SUA_CHUA) {
+        if (p.trangThai() == TrangThaiPhieu.DANG_SUA) {
             c.add(left(UI.label(p.tienDo() + "% hoàn thành", Font.PLAIN, 11, Theme.MUTED)));
         }
         c.setMaximumSize(new Dimension(Integer.MAX_VALUE, c.getPreferredSize().height));
@@ -281,10 +277,10 @@ public final class DieuPhoiPanel extends BasePanel {
         LocalDateTime han = p.duKien() != null ? p.duKien() : LocalDateTime.now().plusDays(1).withHour(17).withMinute(0).withSecond(0).withNano(0);
         tfHan.setText(han.format(DT));
 
-        TrangThaiPhieuSuaChua s = p.trangThai();
-        boolean phanCongDuoc = s == TrangThaiPhieuSuaChua.DA_XAC_NHAN || s == TrangThaiPhieuSuaChua.DANG_SUA_CHUA;
-        setActions(phanCongDuoc, s == TrangThaiPhieuSuaChua.DA_XAC_NHAN && p.maKTV() != null,
-                s.canMoveTo(TrangThaiPhieuSuaChua.DA_HUY), s == TrangThaiPhieuSuaChua.CHO_KIEM_TRA);
+        TrangThaiPhieu s = p.trangThai();
+        boolean phanCongDuoc = s != TrangThaiPhieu.HOAN_TAT;
+        setActions(phanCongDuoc, s == TrangThaiPhieu.CHO_SUA && p.maKTV() != null,
+                s != TrangThaiPhieu.HOAN_TAT, s == TrangThaiPhieu.DANG_SUA);
     }
 
     private void setActions(boolean luu, boolean batDau, boolean huy, boolean kiemTra) {
@@ -334,5 +330,16 @@ public final class DieuPhoiPanel extends BasePanel {
             selectedId = null;
             reload();
         });
+    }
+
+    // ======================================================================
+    // XỬ LÝ SỰ KIỆN Ở CUỐI CÙNG THEO QUY TẮC BẮT BUỘC
+    // ======================================================================
+    private void initEvents() {
+        btnRefresh.addActionListener(e -> reload());
+        btnLuu.addActionListener(e -> luuPhanCong());
+        btnBatDau.addActionListener(e -> batDau());
+        btnHuy.addActionListener(e -> huy());
+        btnKiemTra.addActionListener(e -> Navigator.go(Screen.KIEM_TRA_CL));
     }
 }

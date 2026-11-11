@@ -118,7 +118,7 @@ public class KhachHangXePanel extends BasePanel {
     public void switchToAddVehicleView(KhachHang kh) {
         setHeader("", "Thêm xe cho khách hàng hiện có", "");
         actions.removeAll();
-        JButton btnBack = UI.secondaryButton("Mục lục →");
+        JButton btnBack = UI.secondaryButton("← Quay lại");
         btnBack.addActionListener(e -> handleCancelVehicleForm());
         actions.add(btnBack);
         actions.revalidate();
@@ -131,7 +131,7 @@ public class KhachHangXePanel extends BasePanel {
     public void switchToEditVehicleView(Xe xe) {
         setHeader("", "Chỉnh sửa phương tiện", "");
         actions.removeAll();
-        JButton btnBack = UI.secondaryButton("Mục lục →");
+        JButton btnBack = UI.secondaryButton("← Quay lại");
         btnBack.addActionListener(e -> handleCancelVehicleForm());
         actions.add(btnBack);
         actions.revalidate();
@@ -144,7 +144,7 @@ public class KhachHangXePanel extends BasePanel {
     public void switchToVehicleHistoryView(Xe xe) {
         setHeader("", "Hồ sơ xe và lịch sử sửa chữa", "");
         actions.removeAll();
-        JButton btnBack = UI.secondaryButton("Mục lục →");
+        JButton btnBack = UI.secondaryButton("← Quay lại");
         btnBack.addActionListener(e -> handleCancelVehicleForm());
         actions.add(btnBack);
         actions.revalidate();
