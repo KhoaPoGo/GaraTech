@@ -24,12 +24,14 @@ public final class DieuPhoiPanel extends BasePanel {
     private final JPanel board=new JPanel(new GridLayout(1,TrangThaiPhieu.values().length,12,0));
     private final JTextArea info=new JTextArea();
     private final JLabel heading=UI.h2("Chọn một phiếu để xem chi tiết");
+    private final JButton btnRefresh = UI.secondaryButton("Làm mới");
     private List<PhieuCard> tickets=new ArrayList<>();
     private String selected;
 
     public DieuPhoiPanel(){
         super("Điều hành gara","Tiến độ sửa chữa","Theo dõi trạng thái các phiếu tiếp nhận-sửa chữa.");
-        JButton refresh=UI.secondaryButton("Làm mới"); refresh.addActionListener(e->reload()); actions.add(refresh);
+        actions.add(btnRefresh);
+        initEvents();
         board.setOpaque(false); board.setPreferredSize(new Dimension(1200,360));
         JPanel detail=new JPanel(new BorderLayout(0,10)); detail.setOpaque(false);
         detail.add(heading,BorderLayout.NORTH);
@@ -66,9 +68,5 @@ public final class DieuPhoiPanel extends BasePanel {
     // ======================================================================
     private void initEvents() {
         btnRefresh.addActionListener(e -> reload());
-        btnLuu.addActionListener(e -> luuPhanCong());
-        btnBatDau.addActionListener(e -> batDau());
-        btnHuy.addActionListener(e -> huy());
-        btnKiemTra.addActionListener(e -> Navigator.go(Screen.KIEM_TRA_CL));
     }
 }
