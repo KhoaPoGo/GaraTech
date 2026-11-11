@@ -123,7 +123,7 @@ public class ChiTietHoaDon {
 	}
 
 	public void tinhThanhTien() {
-		this.thanhTien = Math.max(0, soLuong * donGia - giamGia);
+	    this.thanhTien = Math.max(0.0, soLuong * donGia - giamGia);
 	}
 
 	@Override
