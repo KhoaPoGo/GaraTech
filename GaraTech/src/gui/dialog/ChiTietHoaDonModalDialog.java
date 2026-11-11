@@ -121,7 +121,7 @@ public final class ChiTietHoaDonModalDialog extends JDialog {
         String xeDesc = xe != null && xe.getHangXe() != null ? xe.getBienSo() + " - " + xe.getHangXe() + " " + xe.getModel() : (xe != null ? xe.getBienSo() : "--");
         cardInfo.add(taoRowInfo("Biển số & xe:", xeDesc));
 
-        String pt = hd.getPhuongThucTT() != null ? hd.getPhuongThucTT() : (!hd.getDsGiaoDich().isEmpty() ? hd.getDsGiaoDich().get(0).getPhuongThuc() : "Tiền mặt");
+        String pt = hd.getPhuongThuc() != null ? hd.getPhuongThuc() : "Tiền mặt";
         cardInfo.add(taoRowInfo("Hình thức thanh toán:", pt));
         cardInfo.add(taoRowInfo("Thu ngân thực hiện:", hd.getNhanVien() != null ? hd.getNhanVien().getHoTen() : "Trần Thị Bình"));
 

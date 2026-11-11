@@ -4,7 +4,6 @@ import connectDB.ConnectDB;
 import entity.ChiTietDichVu;
 import entity.ChiTietHoaDon;
 import entity.ChiTietLinhKien;
-import entity.GiaoDichThanhToan;
 import entity.HoaDon;
 import entity.KhachHang;
 import entity.NhanVien;
@@ -231,8 +230,9 @@ public class HoaDonDao {
         }
 
         String sql = """
-                SELECT hd.maHoaDon, hd.maPhieu, hd.maNV, hd.ngayLap, hd.tongTienDichVu, hd.tongTienPhuTung,
+                SELECT hd.maHoaDon, hd.maPhieu, hd.maNV, hd.maKM, hd.ngayLap, hd.tongTienDichVu, hd.tongTienPhuTung,
                        hd.chiPhiKhac, hd.giamGia, hd.thueVAT, hd.tongTienThanhToan, hd.trangThai,
+                       hd.phuongThuc, hd.maGiaoDich,
                        nv.hoTen AS tenNV
                 FROM HoaDon hd
                 JOIN NhanVien nv ON hd.maNV = nv.maNV
@@ -248,7 +248,6 @@ public class HoaDonDao {
                 HoaDon hd = new HoaDon();
                 hd.setMaHoaDon(rs.getString("maHoaDon"));
                 hd.setMaPhieu(rs.getString("maPhieu"));
-                hd.setMaNV(rs.getString("maNV"));
 
                 NhanVien nv = new NhanVien();
                 nv.setMaNV(rs.getString("maNV"));
@@ -265,36 +264,17 @@ public class HoaDonDao {
                 hd.setThueVAT(rs.getDouble("thueVAT"));
                 hd.setTongTienThanhToan(rs.getDouble("tongTienThanhToan"));
                 hd.setTrangThai(rs.getString("trangThai"));
+                hd.setPhuongThuc(rs.getString("phuongThuc"));
+                hd.setMaGiaoDich(rs.getString("maGiaoDich"));
 
-                // Lấy chi tiết hóa đơn
-                hd.setDsChiTiet(layChiTietHoaDon(c, maHoaDon));
-
-                // Lấy lịch sử giao dịch (nếu có để tương thích ngược)
-                hd.setDsGiaoDich(layGiaoDichThanhToan(c, maHoaDon));
-
-                // Lấy phương thức thanh toán, mã giao dịch, khuyến mãi
-                String phuongThuc = "Tiền mặt";
-                String maGD = null;
-                String maKM = null;
-                try {
-                    phuongThuc = rs.getString("phuongThuc");
-                    maGD = rs.getString("maGiaoDich");
-                    maKM = rs.getString("maKM");
-                } catch (Exception ignored) {}
-
-                if ((phuongThuc == null || phuongThuc.isBlank()) && !hd.getDsGiaoDich().isEmpty()) {
-                    phuongThuc = hd.getDsGiaoDich().get(0).getPhuongThuc();
-                    maGD = hd.getDsGiaoDich().get(0).getMaGiaoDich();
-                }
-
-                hd.setPhuongThucTT(phuongThuc != null ? phuongThuc : "Tiền mặt");
-                hd.setMaGiaoDich(maGD != null ? maGD : "");
-                hd.setThoiGianThanhToan(hd.getNgayLap());
-                hd.setMaKM(maKM);
+                String maKM = rs.getString("maKM");
                 if (maKM != null && !maKM.isBlank()) {
                     KhuyenMaiDao kmDao = new KhuyenMaiDao();
                     hd.setKhuyenMai(kmDao.timTheoMa(maKM));
                 }
+
+                // Lấy chi tiết hóa đơn
+                hd.setDsChiTiet(layChiTietHoaDon(c, maHoaDon));
 
                 // Lấy thông tin phiếu sửa chữa
                 PhieuTiepNhanSuaChuaDao pDao = new PhieuTiepNhanSuaChuaDao();
@@ -356,34 +336,6 @@ public class HoaDonDao {
                     ct.setGiamGia(rs.getDouble("giamGia"));
                     ct.setThanhTien(rs.getDouble("thanhTien"));
                     list.add(ct);
-                }
-            }
-        }
-        return list;
-    }
-
-    private List<GiaoDichThanhToan> layGiaoDichThanhToan(Connection c, String maHoaDon) throws SQLException {
-        String sql = """
-                SELECT maGiaoDich, maHoaDon, maNV, ngayThanhToan, soTien, phuongThuc, trangThai
-                FROM GiaoDichThanhToan
-                WHERE maHoaDon = ?
-                ORDER BY ngayThanhToan DESC
-                """;
-        List<GiaoDichThanhToan> list = new ArrayList<>();
-        try (PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, maHoaDon);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    GiaoDichThanhToan gd = new GiaoDichThanhToan();
-                    gd.setMaGiaoDich(rs.getString("maGiaoDich"));
-                    gd.setMaHoaDon(rs.getString("maHoaDon"));
-                    gd.setMaNV(rs.getString("maNV"));
-                    Timestamp ts = rs.getTimestamp("ngayThanhToan");
-                    if (ts != null) gd.setNgayThanhToan(ts.toLocalDateTime());
-                    gd.setSoTien(rs.getDouble("soTien"));
-                    gd.setPhuongThuc(rs.getString("phuongThuc"));
-                    gd.setTrangThai(rs.getString("trangThai"));
-                    list.add(gd);
                 }
             }
         }
@@ -648,9 +600,8 @@ public class HoaDonDao {
             hd.setThueVAT(row.thueVAT());
             hd.setTongTienThanhToan(row.tongTienThanhToan());
             hd.setTrangThai(row.trangThai());
-            hd.setPhuongThucTT(row.phuongThuc());
+            hd.setPhuongThuc(row.phuongThuc());
             hd.setMaGiaoDich(row.maGiaoDich());
-            hd.setThoiGianThanhToan(row.ngayLap());
             hd.setMaKM(row.maKM());
             if (row.maKM() != null && !row.maKM().isBlank()) {
                 KhuyenMaiDao kmDao = new KhuyenMaiDao();
@@ -686,12 +637,6 @@ public class HoaDonDao {
                 dsCt.add(ct2);
             }
             hd.setDsChiTiet(dsCt);
-
-            // Giao dịch thanh toán mẫu
-            List<GiaoDichThanhToan> dsGd = new ArrayList<>();
-            GiaoDichThanhToan gd = new GiaoDichThanhToan("GD-20261108-001", row.maHoaDon(), "NV26002", row.ngayLap(), row.tongTienThanhToan(), row.phuongThuc(), "Đã thanh toán");
-            dsGd.add(gd);
-            hd.setDsGiaoDich(dsGd);
 
             return hd;
         }
