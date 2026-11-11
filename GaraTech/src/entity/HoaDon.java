@@ -1,6 +1,8 @@
 package entity;
 
+import enums.PhuongThucThanhToan;
 import enums.TrangThaiHoaDon;
+import enums.TrangThaiThanhToan;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -9,11 +11,8 @@ import java.util.Objects;
 
 /**
  * Thực thể Hóa đơn thanh toán dịch vụ & phụ tùng.
- * Đã chuẩn hóa loại bỏ các thuộc tính dư thừa:
- * - maPhieu, maNV, maKM (truy xuất trực tiếp qua đối tượng phieuSuaChua, nhanVien, khuyenMai).
- * - thoiGianThanhToan (sử dụng thống nhất ngayLap).
- * - dsGiaoDich (thanh toán dứt điểm lưu trực tiếp qua phuongThuc và maGiaoDich trên HoaDon).
- * - Chuẩn hóa phuongThucTT thành phuongThuc khớp 100% với CSDL SQL Server.
+ * Sử dụng enum cho phương thức thanh toán (PhuongThucThanhToan)
+ * và trạng thái thanh toán (TrangThaiThanhToan: CHUA_THANH_TOAN, DA_THANH_TOAN).
  */
 public class HoaDon {
     private String maHoaDon;
@@ -27,22 +26,23 @@ public class HoaDon {
     private double giamGia;
     private double thueVAT = 10.0;
     private double tongTienThanhToan;
-    private String phuongThuc = "Tiền mặt"; // "Tiền mặt" hoặc "Chuyển khoản"
-    private String maGiaoDich;               // Mã giao dịch ngân hàng nếu chuyển khoản
-    private String trangThai = TrangThaiHoaDon.DA_THANH_TOAN.label();
+    private PhuongThucThanhToan phuongThucTT = PhuongThucThanhToan.TIEN_MAT;
+    private TrangThaiThanhToan trangThaiThanhToan = TrangThaiThanhToan.DA_THANH_TOAN;
+    private String maGiaoDich; // Mã GD ngân hàng nếu chuyển khoản
     private List<ChiTietHoaDon> dsChiTiet = new ArrayList<>();
 
     public HoaDon() {
-        super();
+        this.trangThaiThanhToan = TrangThaiThanhToan.CHUA_THANH_TOAN;
     }
 
     public HoaDon(String maHoaDon) {
+        this();
         this.maHoaDon = maHoaDon;
     }
 
     public HoaDon(String maHoaDon, PhieuTiepNhanSuaChua phieuSuaChua, NhanVien nhanVien, LocalDateTime ngayLap,
                   double tongTienDichVu, double tongTienPhuTung, double chiPhiKhac, double giamGia,
-                  double thueVAT, double tongTienThanhToan, String phuongThuc, String trangThai) {
+                  double thueVAT, double tongTienThanhToan, PhuongThucThanhToan phuongThucTT, TrangThaiThanhToan trangThaiThanhToan) {
         this.maHoaDon = maHoaDon;
         this.phieuSuaChua = phieuSuaChua;
         this.nhanVien = nhanVien;
@@ -53,8 +53,8 @@ public class HoaDon {
         this.giamGia = giamGia;
         this.thueVAT = thueVAT;
         this.tongTienThanhToan = tongTienThanhToan;
-        this.phuongThuc = phuongThuc != null ? phuongThuc : "Tiền mặt";
-        this.trangThai = trangThai != null ? trangThai : TrangThaiHoaDon.DA_THANH_TOAN.label();
+        this.phuongThucTT = phuongThucTT != null ? phuongThucTT : PhuongThucThanhToan.TIEN_MAT;
+        this.trangThaiThanhToan = trangThaiThanhToan != null ? trangThaiThanhToan : TrangThaiThanhToan.DA_THANH_TOAN;
     }
 
     // ---- Getters / Setters ----
@@ -146,7 +146,6 @@ public class HoaDon {
         this.ngayLap = ngayLap;
     }
 
-    // Compatibility alias: thoiGianThanhToan đồng nhất với ngayLap
     public LocalDateTime getThoiGianThanhToan() {
         return ngayLap;
     }
@@ -203,21 +202,62 @@ public class HoaDon {
         this.tongTienThanhToan = tongTienThanhToan;
     }
 
-    public String getPhuongThuc() {
-        return phuongThuc;
+    // ---- Phương thức thanh toán (Enum PhuongThucThanhToan) ----
+    public PhuongThucThanhToan getPhuongThucTT() {
+        return phuongThucTT;
+    }
+
+    public void setPhuongThucTT(PhuongThucThanhToan phuongThucTT) {
+        this.phuongThucTT = phuongThucTT != null ? phuongThucTT : PhuongThucThanhToan.TIEN_MAT;
+    }
+
+    public void setPhuongThucTT(String pt) {
+        this.phuongThucTT = PhuongThucThanhToan.fromString(pt);
+    }
+
+    public PhuongThucThanhToan getPhuongThuc() {
+        return phuongThucTT;
+    }
+
+    public void setPhuongThuc(PhuongThucThanhToan phuongThuc) {
+        this.phuongThucTT = phuongThuc != null ? phuongThuc : PhuongThucThanhToan.TIEN_MAT;
     }
 
     public void setPhuongThuc(String phuongThuc) {
-        this.phuongThuc = phuongThuc != null ? phuongThuc : "Tiền mặt";
+        this.phuongThucTT = PhuongThucThanhToan.fromString(phuongThuc);
     }
 
-    // Compatibility alias cho phuongThucTT
-    public String getPhuongThucTT() {
-        return phuongThuc;
+    // ---- Trạng thái thanh toán (Enum TrangThaiThanhToan) ----
+    public TrangThaiThanhToan getTrangThaiThanhToan() {
+        return trangThaiThanhToan;
     }
 
-    public void setPhuongThucTT(String phuongThucTT) {
-        this.phuongThuc = phuongThucTT != null ? phuongThucTT : "Tiền mặt";
+    public void setTrangThaiThanhToan(TrangThaiThanhToan trangThaiThanhToan) {
+        this.trangThaiThanhToan = trangThaiThanhToan != null ? trangThaiThanhToan : TrangThaiThanhToan.DA_THANH_TOAN;
+    }
+
+    public void setTrangThaiThanhToan(String s) {
+        this.trangThaiThanhToan = TrangThaiThanhToan.fromString(s);
+    }
+
+    public TrangThaiThanhToan getTrangThai() {
+        return trangThaiThanhToan;
+    }
+
+    public void setTrangThai(TrangThaiThanhToan trangThai) {
+        this.trangThaiThanhToan = trangThai != null ? trangThai : TrangThaiThanhToan.DA_THANH_TOAN;
+    }
+
+    public void setTrangThai(String trangThai) {
+        this.trangThaiThanhToan = TrangThaiThanhToan.fromString(trangThai);
+    }
+
+    public TrangThaiHoaDon getTrangThaiEnum() {
+        return TrangThaiHoaDon.fromLabel(trangThaiThanhToan != null ? trangThaiThanhToan.label() : null);
+    }
+
+    public void setTrangThai(TrangThaiHoaDon tt) {
+        this.trangThaiThanhToan = tt != null ? TrangThaiThanhToan.fromString(tt.label()) : null;
     }
 
     public String getMaGiaoDich() {
@@ -226,22 +266,6 @@ public class HoaDon {
 
     public void setMaGiaoDich(String maGiaoDich) {
         this.maGiaoDich = maGiaoDich;
-    }
-
-    public String getTrangThai() {
-        return trangThai;
-    }
-
-    public void setTrangThai(String trangThai) {
-        this.trangThai = trangThai;
-    }
-
-    public TrangThaiHoaDon getTrangThaiEnum() {
-        return TrangThaiHoaDon.fromLabel(trangThai);
-    }
-
-    public void setTrangThai(TrangThaiHoaDon tt) {
-        this.trangThai = tt != null ? tt.label() : null;
     }
 
     public List<ChiTietHoaDon> getDsChiTiet() {
@@ -269,7 +293,7 @@ public class HoaDon {
         return "HoaDon [maHoaDon=" + maHoaDon + ", maPhieu=" + getMaPhieu() + ", ngayLap=" + ngayLap
                 + ", tongTienDichVu=" + tongTienDichVu + ", tongTienPhuTung=" + tongTienPhuTung
                 + ", chiPhiKhac=" + chiPhiKhac + ", giamGia=" + giamGia + ", thueVAT=" + thueVAT
-                + ", tongTienThanhToan=" + tongTienThanhToan + ", phuongThuc=" + phuongThuc
-                + ", trangThai=" + trangThai + "]";
+                + ", tongTienThanhToan=" + tongTienThanhToan + ", phuongThucTT=" + phuongThucTT
+                + ", trangThaiThanhToan=" + trangThaiThanhToan + "]";
     }
 }
