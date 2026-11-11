@@ -51,8 +51,7 @@ public final class IdGenerator {
         PHIEU_XUAT_KHO("PhieuXuatKho", "maPhieuXK", 3, d -> "PXK-" + d.format(YYYYMMDD) + "-"),
         CHI_TIET_XUAT_KHO("ChiTietXuatKho", "maChiTietXK", 5, d -> "CTXK"),
         HOA_DON("HoaDon", "maHoaDon", 4, d -> "HD" + d.format(YYYYMMDD) + "-"),
-        CHI_TIET_HOA_DON("ChiTietHoaDon", "maChiTietHD", 5, d -> "CTHD"),
-        GIAO_DICH("GiaoDichThanhToan", "maGiaoDich", 3, d -> "GD-" + d.format(YYYYMMDD) + "-");
+        CHI_TIET_HOA_DON("ChiTietHoaDon", "maChiTietHD", 5, d -> "CTHD");
 
         final String table;
         final String column;

@@ -197,7 +197,7 @@ public final class InHoaDonDialog extends JDialog implements Printable {
         pInfo.add(UI.label("Mã phiếu SC: " + (phieu != null ? phieu.getMaPhieu() : "--"), Font.PLAIN, 12, Theme.TEXT));
         pInfo.add(UI.label("KTV phụ trách: " + (phieu != null && phieu.getNhanVienKyThuat() != null ? phieu.getNhanVienKyThuat().getHoTen() : "Lê Minh Cường"), Font.PLAIN, 12, Theme.TEXT));
 
-        String ptDesc = hd.getPhuongThucTT() != null ? hd.getPhuongThucTT() : "Tiền mặt";
+        String ptDesc = hd.getPhuongThucTT() != null ? hd.getPhuongThucTT().label() : "Tiền mặt";
         if ("Chuyển khoản".equalsIgnoreCase(ptDesc) && hd.getMaGiaoDich() != null && !hd.getMaGiaoDich().isBlank()) {
             ptDesc += " (Mã GD: " + hd.getMaGiaoDich() + ")";
         }

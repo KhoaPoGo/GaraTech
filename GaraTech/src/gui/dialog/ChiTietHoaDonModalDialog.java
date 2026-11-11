@@ -112,7 +112,7 @@ public final class ChiTietHoaDonModalDialog extends JDialog {
         cardInfo.setAlignmentX(0.0f);
 
         cardInfo.add(taoRowInfo("Mã hóa đơn:", hd.getMaHoaDon()));
-        cardInfo.add(taoRowInfo("Trạng thái:", hd.getTrangThai() != null ? hd.getTrangThai() : "Đã thanh toán"));
+        cardInfo.add(taoRowInfo("Trạng thái:", hd.getTrangThai() != null ? hd.getTrangThai().label() : "Đã thanh toán"));
 
         cardInfo.add(taoRowInfo("Mã phiếu sửa chữa:", phieu != null ? phieu.getMaPhieu() : hd.getMaPhieu()));
         cardInfo.add(taoRowInfo("Thời gian lập / thanh toán:", hd.getNgayLap() != null ? hd.getNgayLap().format(TIME_FMT) : "--"));
@@ -121,7 +121,7 @@ public final class ChiTietHoaDonModalDialog extends JDialog {
         String xeDesc = xe != null && xe.getHangXe() != null ? xe.getBienSo() + " - " + xe.getHangXe() + " " + xe.getModel() : (xe != null ? xe.getBienSo() : "--");
         cardInfo.add(taoRowInfo("Biển số & xe:", xeDesc));
 
-        String pt = hd.getPhuongThucTT() != null ? hd.getPhuongThucTT() : (!hd.getDsGiaoDich().isEmpty() ? hd.getDsGiaoDich().get(0).getPhuongThuc() : "Tiền mặt");
+        String pt = hd.getPhuongThuc() != null ? hd.getPhuongThuc().label() : "Tiền mặt";
         cardInfo.add(taoRowInfo("Hình thức thanh toán:", pt));
         cardInfo.add(taoRowInfo("Thu ngân thực hiện:", hd.getNhanVien() != null ? hd.getNhanVien().getHoTen() : "Trần Thị Bình"));
 

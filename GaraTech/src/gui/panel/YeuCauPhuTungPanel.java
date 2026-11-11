@@ -397,8 +397,8 @@ public final class YeuCauPhuTungPanel extends BasePanel {
         Part selectedPart = (Part) part.getSelectedItem();
         RepairTicket selectedTicket = (RepairTicket) ticket.getSelectedItem();
         if (selectedPart == null || selectedTicket == null) return;
-        if (!selectedTicket.dangSuaChua()) {
-            Msg.error(this, "Chỉ được yêu cầu phụ tùng cho phiếu đang ở trạng thái Đang sửa chữa.");
+        if (!selectedTicket.duocYeuCauPhuTung()) {
+            Msg.error(this, "Chỉ được yêu cầu phụ tùng cho phiếu Đang sửa chữa hoặc Chờ linh kiện.");
             return;
         }
         try {
@@ -463,7 +463,7 @@ public final class YeuCauPhuTungPanel extends BasePanel {
         clearDraft();
         ticket.requestFocusInWindow();
         feedback.setForeground(Theme.MUTED);
-        feedback.setText("Đang tạo yêu cầu mới. Chọn phiếu đang sửa chữa và thêm phụ tùng cần cấp.");
+        feedback.setText("Chọn phiếu Đang sửa chữa hoặc Chờ linh kiện, sau đó thêm phụ tùng cần cấp.");
     }
 
     private void clearDraft() {
@@ -502,10 +502,11 @@ public final class YeuCauPhuTungPanel extends BasePanel {
             // Kiểm tra lại trạng thái từ CSDL ngay trước khi gửi, tránh dùng phiếu đã đổi trạng thái.
             boolean stillWorking = queryDao.findAssignedRepairs(Session.maNV()).stream()
                     .anyMatch(row -> row.maPhieuSC().equals(chosen.maPhieuSC)
-                            && "Đang sửa chữa".equals(row.trangThai()));
+                            && ("Đang sửa chữa".equals(row.trangThai())
+                            || "Chờ linh kiện".equals(row.trangThai())));
             if (!stillWorking) {
                 throw new IllegalStateException(
-                        "Phiếu sửa chữa không còn ở trạng thái Đang sửa chữa. Hãy tải lại dữ liệu.");
+                        "Phiếu không còn ở trạng thái Đang sửa chữa hoặc Chờ linh kiện. Hãy tải lại dữ liệu.");
             }
 
             List<YeuCauPhuTungService.ChiTietYeuCauInput> details = new ArrayList<>();
@@ -652,7 +653,7 @@ public final class YeuCauPhuTungPanel extends BasePanel {
     private void updateButtons() {
         RepairTicket chosen = (RepairTicket) ticket.getSelectedItem();
         boolean ownSession = owner != null && Objects.equals(owner, Session.maNV());
-        boolean validTicket = chosen != null && chosen.dangSuaChua();
+        boolean validTicket = chosen != null && chosen.duocYeuCauPhuTung();
         boolean validPart = part.getSelectedItem() != null;
         boolean validReason = reason.getText() != null && !reason.getText().isBlank()
                 && reason.getText().trim().length() <= 200;
@@ -834,7 +835,10 @@ public final class YeuCauPhuTungPanel extends BasePanel {
     }
 
     private record RepairTicket(String maPhieuSC, String trangThai, String bienSo, String thongTinXe) {
-        boolean dangSuaChua() { return "Đang sửa chữa".equals(trangThai); }
+        boolean duocYeuCauPhuTung() {
+            return "Đang sửa chữa".equals(trangThai)
+                    || "Chờ linh kiện".equals(trangThai);
+        }
 
         @Override
         public String toString() {

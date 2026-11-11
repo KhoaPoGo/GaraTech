@@ -11,22 +11,26 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/** DAO truy vấn danh sách phiếu sửa chữa được phân công và lịch sử yêu cầu phụ tùng của KTV. */
+/**
+ * DAO cho màn hình yêu cầu phụ tùng của kỹ thuật viên.
+ * Dùng schema mới: PhieuTiepNhanSuaChua, PhieuXuatKho, Xe, NhanVien.
+ */
 public final class YeuCauPhuTungDao {
 
-    /** Phiếu sửa chữa mà KTV có thể chọn để lập yêu cầu phụ tùng. */
+    /** Phiếu được phân công cho KTV; maPhieuSC là tên alias tương thích GUI cũ. */
     public record RepairTicketRow(
             String maPhieuSC,
             String trangThai,
             String bienSo,
             String thongTinXe
     ) {
-        public boolean dangSuaChua() {
-            return "Đang sửa chữa".equals(trangThai);
+        public boolean duocYeuCauPhuTung() {
+            return "Đang sửa chữa".equals(trangThai)
+                    || "Chờ linh kiện".equals(trangThai);
         }
     }
 
-    /** Thông tin phiếu yêu cầu xuất kho kèm thông tin xe để hiển thị lịch sử. */
+    /** Lịch sử yêu cầu xuất kho của KTV. */
     public record RequestRow(
             String maPhieuXK,
             String maPhieuSC,
@@ -41,26 +45,38 @@ public final class YeuCauPhuTungDao {
     ) { }
 
     /**
-     * Danh sách phiếu đang được phân công cho kỹ thuật viên.
-     * Chỉ đưa vào lựa chọn các phiếu Đã xác nhận hoặc Đang sửa chữa.
-     * Việc gửi yêu cầu chỉ được bật khi phiếu ở trạng thái Đang sửa chữa.
+     * Tìm các phiếu chưa hoàn tất đang được phân công cho KTV.
+     * Database lưu trạng thái dạng mã; DAO chuyển sang nhãn tiếng Việt để GUI dùng.
+     * Có cả CHO_LINH_KIEN vì KTV cần gửi yêu cầu vật tư khi phiếu đang chờ linh kiện.
      */
     public List<RepairTicketRow> findAssignedRepairs(String maKTV) throws SQLException {
         requireText(maKTV, "Mã kỹ thuật viên");
 
         String sql = """
-                SELECT p.maPhieuSC,
-                       p.trangThai,
-                       tn.bienSo,
-                       CONCAT(x.hangXe, N' ', x.model, N' ', x.namSanXuat, N' · ', x.mauXe) AS thongTinXe
-                FROM PhieuSuaChua p
-                INNER JOIN PhieuTiepNhan tn ON tn.maPhieuTN = p.maPhieuTN
-                INNER JOIN Xe x ON x.bienSo = tn.bienSo
-                WHERE p.maKTV = ?
-                  AND p.trangThai IN (N'Đã xác nhận', N'Đang sửa chữa')
-                ORDER BY CASE WHEN p.trangThai = N'Đang sửa chữa' THEN 0 ELSE 1 END,
-                         p.thoiGianDuKien,
-                         p.maPhieuSC DESC
+                SELECT p.maPhieu AS maPhieuSC,
+                       CASE p.trangThai
+                           WHEN 'CHO_SUA' THEN N'Chờ sửa chữa'
+                           WHEN 'DANG_SUA' THEN N'Đang sửa chữa'
+                           WHEN 'CHO_LINH_KIEN' THEN N'Chờ linh kiện'
+                           WHEN 'HOAN_TAT' THEN N'Hoàn tất'
+                           ELSE p.trangThai
+                       END AS trangThaiHienThi,
+                       p.bienSo,
+                       CONCAT(x.hangXe, N' ', x.model, N' ', x.namSanXuat,
+                              N' · ', x.mauXe) AS thongTinXe
+                FROM dbo.PhieuTiepNhanSuaChua p
+                INNER JOIN dbo.Xe x ON x.bienSo = p.bienSo
+                WHERE p.maNVKyThuat = ?
+                  AND p.trangThai IN ('CHO_SUA', 'DANG_SUA', 'CHO_LINH_KIEN')
+                ORDER BY CASE p.trangThai
+                             WHEN 'CHO_LINH_KIEN' THEN 0
+                             WHEN 'DANG_SUA' THEN 1
+                             WHEN 'CHO_SUA' THEN 2
+                             ELSE 3
+                         END,
+                         CASE WHEN p.thoiGianHenTra IS NULL THEN 1 ELSE 0 END,
+                         p.thoiGianHenTra,
+                         p.ngayGioTiepNhan DESC
                 """;
 
         List<RepairTicketRow> result = new ArrayList<>();
@@ -71,7 +87,7 @@ public final class YeuCauPhuTungDao {
                 while (rs.next()) {
                     result.add(new RepairTicketRow(
                             rs.getString("maPhieuSC"),
-                            rs.getString("trangThai"),
+                            rs.getString("trangThaiHienThi"),
                             rs.getString("bienSo"),
                             rs.getString("thongTinXe")
                     ));
@@ -82,28 +98,29 @@ public final class YeuCauPhuTungDao {
     }
 
     /**
-     * Lấy lịch sử mọi yêu cầu phụ tùng do kỹ thuật viên hiện tại gửi.
-     * JOIN qua Phiếu sửa chữa để vẫn hiển thị được xe của các phiếu đã hoàn tất.
+     * Đọc lịch sử yêu cầu kho theo kỹ thuật viên.
+     * PhieuXuatKho.maPhieuSC là computed column, nhưng truy vấn dùng maPhieu gốc
+     * để thể hiện đúng cấu trúc schema mới.
      */
     public List<RequestRow> findRequestsByTechnician(String maKTV) throws SQLException {
         requireText(maKTV, "Mã kỹ thuật viên");
 
         String sql = """
                 SELECT px.maPhieuXK,
-                       px.maPhieuSC,
-                       tn.bienSo,
-                       CONCAT(x.hangXe, N' ', x.model, N' ', x.namSanXuat, N' · ', x.mauXe) AS thongTinXe,
+                       p.maPhieu AS maPhieuSC,
+                       p.bienSo,
+                       CONCAT(x.hangXe, N' ', x.model, N' ', x.namSanXuat,
+                              N' · ', x.mauXe) AS thongTinXe,
                        px.ngayYeuCau,
                        px.ngayXuat,
                        px.lyDoXuat,
                        px.lyDoTuChoi,
                        nv.hoTen AS tenNVKho,
                        px.trangThai
-                FROM PhieuXuatKho px
-                INNER JOIN PhieuSuaChua p ON p.maPhieuSC = px.maPhieuSC
-                INNER JOIN PhieuTiepNhan tn ON tn.maPhieuTN = p.maPhieuTN
-                INNER JOIN Xe x ON x.bienSo = tn.bienSo
-                LEFT JOIN NhanVien nv ON nv.maNV = px.maNVKho
+                FROM dbo.PhieuXuatKho px
+                INNER JOIN dbo.PhieuTiepNhanSuaChua p ON p.maPhieu = px.maPhieu
+                INNER JOIN dbo.Xe x ON x.bienSo = p.bienSo
+                LEFT JOIN dbo.NhanVien nv ON nv.maNV = px.maNVKho
                 WHERE px.maKTVYeuCau = ?
                 ORDER BY px.ngayYeuCau DESC, px.maPhieuXK DESC
                 """;

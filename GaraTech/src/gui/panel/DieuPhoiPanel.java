@@ -24,12 +24,14 @@ public final class DieuPhoiPanel extends BasePanel {
     private final JPanel board=new JPanel(new GridLayout(1,TrangThaiPhieu.values().length,12,0));
     private final JTextArea info=new JTextArea();
     private final JLabel heading=UI.h2("Chọn một phiếu để xem chi tiết");
+    private final JButton btnRefresh = UI.secondaryButton("Làm mới");
     private List<PhieuCard> tickets=new ArrayList<>();
     private String selected;
 
     public DieuPhoiPanel(){
         super("Điều hành gara","Tiến độ sửa chữa","Theo dõi trạng thái các phiếu tiếp nhận-sửa chữa.");
-        JButton refresh=UI.secondaryButton("Làm mới"); refresh.addActionListener(e->reload()); actions.add(refresh);
+        actions.add(btnRefresh);
+        initEvents();
         board.setOpaque(false); board.setPreferredSize(new Dimension(1200,360));
         JPanel detail=new JPanel(new BorderLayout(0,10)); detail.setOpaque(false);
         detail.add(heading,BorderLayout.NORTH);
@@ -60,4 +62,14 @@ public final class DieuPhoiPanel extends BasePanel {
         heading.setText("Phiếu "+p.maPhieuSC()+" · "+p.trangThai().label());
         info.setText("Khách hàng: "+p.tenKhach()+"\nXe: "+p.bienSo()+" · "+p.tenXe()+"\nKỹ thuật viên: "+(p.tenKTV()==null?"Chưa gán":p.tenKTV())+"\nYêu cầu: "+(p.yeuCau()==null?"":p.yeuCau())+"\nNgày bắt đầu: "+(p.batDau()==null?"Chưa bắt đầu":Fmt.dateTime(p.batDau()))+"\nHẹn trả: "+(p.duKien()==null?"Chưa có":Fmt.dateTime(p.duKien()))+"\nTiến độ: "+p.tienDo()+"%\n\nSQL hiện lưu trạng thái phiếu và thông tin bắt đầu/hẹn trả; chưa lưu tiến độ từng hạng mục.");
     }
+<<<<<<< HEAD
+=======
+
+    // ======================================================================
+    // XỬ LÝ SỰ KIỆN Ở CUỐI CÙNG THEO QUY TẮC BẮT BUỘC
+    // ======================================================================
+    private void initEvents() {
+        btnRefresh.addActionListener(e -> reload());
+    }
+>>>>>>> ee4051e160bf86aa9485c2a5e8912ac2df36a606
 }
